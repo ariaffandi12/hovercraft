@@ -1,626 +1,127 @@
--- [Hovercraft] War Tycoon Launcher for Roblox
--- Single file executor script
+-- Script GUI + Fitur Get All Buildings (Roblox Lua)
+-- Tempatkan ini di LocalScript dalam StarterGui
 
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local SoundService = game:GetService("SoundService")
-
-local player = Players.LocalPlayer
+--===[ GUI SETUP ]===--
+local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Clean up existing launcher
-if playerGui:FindFirstChild("HovercraftLauncher") then
-    playerGui.HovercraftLauncher:Destroy()
-end
-
--- Create main ScreenGui
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "HovercraftLauncher"
+screenGui.Name = "HovercraftGUI"
 screenGui.ResetOnSpawn = false
-screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = playerGui
 
--- Main launcher window
+-- Frame utama
 local mainFrame = Instance.new("Frame")
-mainFrame.Name = "LauncherWindow"
-mainFrame.Size = UDim2.new(0, 400, 0, 300)
-mainFrame.Position = UDim2.new(0, 200, 0, 150)
-mainFrame.BackgroundColor3 = Color3.fromRGB(25, 30, 40)
+mainFrame.Size = UDim2.new(0, 300, 0, 180)
+mainFrame.Position = UDim2.new(0.3, 0, 0.3, 0)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 mainFrame.BorderSizePixel = 0
 mainFrame.Active = true
 mainFrame.Draggable = true
 mainFrame.Parent = screenGui
 
--- Window corner rounding
-local mainCorner = Instance.new("UICorner")
-mainCorner.CornerRadius = UDim.new(0, 15)
-mainCorner.Parent = mainFrame
+-- Judul
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 30)
+title.BackgroundTransparency = 1
+title.Text = "[Hovercraft] War Tycoon"
+title.TextColor3 = Color3.new(1, 1, 1)
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 20
+title.Parent = mainFrame
 
--- Window border glow
-local mainStroke = Instance.new("UIStroke")
-mainStroke.Color = Color3.fromRGB(70, 130, 255)
-mainStroke.Thickness = 2
-mainStroke.Transparency = 0.4
-mainStroke.Parent = mainFrame
+-- Tombol Minimize
+local minimize = Instance.new("TextButton")
+minimize.Size = UDim2.new(0, 25, 0, 25)
+minimize.Position = UDim2.new(1, -55, 0, 5)
+minimize.Text = "-"
+minimize.TextSize = 18
+minimize.Font = Enum.Font.SourceSansBold
+minimize.TextColor3 = Color3.new(1,1,1)
+minimize.BackgroundColor3 = Color3.fromRGB(50,50,50)
+minimize.Parent = mainFrame
 
--- Window shadow
-local shadowFrame = Instance.new("Frame")
-shadowFrame.Name = "Shadow"
-shadowFrame.Size = UDim2.new(1, 10, 1, 10)
-shadowFrame.Position = UDim2.new(0, 5, 0, 5)
-shadowFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-shadowFrame.BackgroundTransparency = 0.7
-shadowFrame.ZIndex = mainFrame.ZIndex - 1
-shadowFrame.Parent = screenGui
+-- Tombol Exit
+local exit = Instance.new("TextButton")
+exit.Size = UDim2.new(0, 25, 0, 25)
+exit.Position = UDim2.new(1, -25, 0, 5)
+exit.Text = "x"
+exit.TextSize = 18
+exit.Font = Enum.Font.SourceSansBold
+exit.TextColor3 = Color3.new(1,0.3,0.3)
+exit.BackgroundColor3 = Color3.fromRGB(50,50,50)
+exit.Parent = mainFrame
 
-local shadowCorner = Instance.new("UICorner")
-shadowCorner.CornerRadius = UDim.new(0, 15)
-shadowCorner.Parent = shadowFrame
-
--- Title bar
-local titleBar = Instance.new("Frame")
-titleBar.Name = "TitleBar"
-titleBar.Size = UDim2.new(1, 0, 0, 40)
-titleBar.Position = UDim2.new(0, 0, 0, 0)
-titleBar.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
-titleBar.BorderSizePixel = 0
-titleBar.Parent = mainFrame
-
-local titleCorner = Instance.new("UICorner")
-titleCorner.CornerRadius = UDim.new(0, 15)
-titleCorner.Parent = titleBar
-
--- Title bar bottom extension
-local titleExtension = Instance.new("Frame")
-titleExtension.Size = UDim2.new(1, 0, 0, 15)
-titleExtension.Position = UDim2.new(0, 0, 1, -15)
-titleExtension.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
-titleExtension.BorderSizePixel = 0
-titleExtension.Parent = titleBar
-
--- Window controls container
-local controlsFrame = Instance.new("Frame")
-controlsFrame.Name = "Controls"
-controlsFrame.Size = UDim2.new(0, 60, 1, 0)
-controlsFrame.Position = UDim2.new(1, -70, 0, 0)
-controlsFrame.BackgroundTransparency = 1
-controlsFrame.Parent = titleBar
-
--- Minimize button
-local minimizeBtn = Instance.new("TextButton")
-minimizeBtn.Name = "MinimizeButton"
-minimizeBtn.Size = UDim2.new(0, 25, 0, 25)
-minimizeBtn.Position = UDim2.new(0, 5, 0, 7)
-minimizeBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 50)
-minimizeBtn.Text = "−"
-minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-minimizeBtn.TextSize = 16
-minimizeBtn.Font = Enum.Font.GothamBold
-minimizeBtn.BorderSizePixel = 0
-minimizeBtn.Parent = controlsFrame
-
-local minimizeCorner = Instance.new("UICorner")
-minimizeCorner.CornerRadius = UDim.new(0, 3)
-minimizeCorner.Parent = minimizeBtn
-
--- Close button
-local closeBtn = Instance.new("TextButton")
-closeBtn.Name = "CloseButton"
-closeBtn.Size = UDim2.new(0, 25, 0, 25)
-closeBtn.Position = UDim2.new(0, 35, 0, 7)
-closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-closeBtn.Text = "×"
-closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeBtn.TextSize = 16
-closeBtn.Font = Enum.Font.GothamBold
-closeBtn.BorderSizePixel = 0
-closeBtn.Parent = controlsFrame
-
-local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(0, 3)
-closeCorner.Parent = closeBtn
-
--- Status indicators
-local statusFrame = Instance.new("Frame")
-statusFrame.Size = UDim2.new(0, 40, 1, 0)
-statusFrame.Position = UDim2.new(0, 10, 0, 0)
-statusFrame.BackgroundTransparency = 1
-statusFrame.Parent = titleBar
-
-local statusLight1 = Instance.new("Frame")
-statusLight1.Size = UDim2.new(0, 8, 0, 8)
-statusLight1.Position = UDim2.new(0, 0, 0, 16)
-statusLight1.BackgroundColor3 = Color3.fromRGB(70, 130, 255)
-statusLight1.BorderSizePixel = 0
-statusLight1.Parent = statusFrame
-
-local light1Corner = Instance.new("UICorner")
-light1Corner.CornerRadius = UDim.new(1, 0)
-light1Corner.Parent = statusLight1
-
-local statusLight2 = Instance.new("Frame")
-statusLight2.Size = UDim2.new(0, 6, 0, 6)
-statusLight2.Position = UDim2.new(0, 15, 0, 17)
-statusLight2.BackgroundColor3 = Color3.fromRGB(50, 200, 100)
-statusLight2.BorderSizePixel = 0
-statusLight2.Parent = statusFrame
-
-local light2Corner = Instance.new("UICorner")
-light2Corner.CornerRadius = UDim.new(1, 0)
-light2Corner.Parent = statusLight2
-
--- Main content area
-local contentFrame = Instance.new("Frame")
-contentFrame.Name = "Content"
-contentFrame.Size = UDim2.new(1, -20, 1, -60)
-contentFrame.Position = UDim2.new(0, 10, 0, 50)
-contentFrame.BackgroundTransparency = 1
-contentFrame.Parent = mainFrame
-
--- Hovercraft icon
-local hovercraftFrame = Instance.new("Frame")
-hovercraftFrame.Name = "Hovercraft"
-hovercraftFrame.Size = UDim2.new(0, 60, 0, 40)
-hovercraftFrame.Position = UDim2.new(0, 30, 0, 10)
-hovercraftFrame.BackgroundColor3 = Color3.fromRGB(70, 130, 255)
-hovercraftFrame.BorderSizePixel = 0
-hovercraftFrame.Parent = contentFrame
-
-local hovercraftCorner = Instance.new("UICorner")
-hovercraftCorner.CornerRadius = UDim.new(0, 8)
-hovercraftCorner.Parent = hovercraftFrame
-
-local hovercraftGlow = Instance.new("UIStroke")
-hovercraftGlow.Color = Color3.fromRGB(100, 180, 255)
-hovercraftGlow.Thickness = 2
-hovercraftGlow.Transparency = 0.3
-hovercraftGlow.Parent = hovercraftFrame
-
--- Hovercraft details
-local cockpit = Instance.new("Frame")
-cockpit.Size = UDim2.new(0, 20, 0, 15)
-cockpit.Position = UDim2.new(0, 20, 0, 12)
-cockpit.BackgroundColor3 = Color3.fromRGB(200, 255, 255)
-cockpit.BackgroundTransparency = 0.3
-cockpit.BorderSizePixel = 0
-cockpit.Parent = hovercraftFrame
-
-local cockpitCorner = Instance.new("UICorner")
-cockpitCorner.CornerRadius = UDim.new(0, 3)
-cockpitCorner.Parent = cockpit
-
--- Title text
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Name = "GameTitle"
-titleLabel.Size = UDim2.new(1, 0, 0, 30)
-titleLabel.Position = UDim2.new(0, 0, 0, 20)
-titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "[Hovercraft]"
-titleLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
-titleLabel.TextSize = 24
-titleLabel.Font = Enum.Font.GothamBold
-titleLabel.TextXAlignment = Enum.TextXAlignment.Center
-titleLabel.Parent = contentFrame
-
--- Subtitle
-local subtitleLabel = Instance.new("TextLabel")
-subtitleLabel.Name = "GameSubtitle"
-subtitleLabel.Size = UDim2.new(1, 0, 0, 20)
-subtitleLabel.Position = UDim2.new(0, 0, 0, 50)
-subtitleLabel.BackgroundTransparency = 1
-subtitleLabel.Text = "WAR TYCOON"
-subtitleLabel.TextColor3 = Color3.fromRGB(200, 220, 255)
-subtitleLabel.TextSize = 16
-subtitleLabel.Font = Enum.Font.Gotham
-subtitleLabel.TextXAlignment = Enum.TextXAlignment.Center
-subtitleLabel.Parent = contentFrame
-
--- Decorative line
-local decorLine = Instance.new("Frame")
-decorLine.Size = UDim2.new(0, 300, 0, 2)
-decorLine.Position = UDim2.new(0, 40, 0, 80)
-decorLine.BackgroundColor3 = Color3.fromRGB(70, 130, 255)
-decorLine.BackgroundTransparency = 0.5
-decorLine.BorderSizePixel = 0
-decorLine.Parent = contentFrame
-
--- Main button
+-- Tombol MAIN
 local mainButton = Instance.new("TextButton")
-mainButton.Name = "MainButton"
-mainButton.Size = UDim2.new(0, 300, 0, 50)
-mainButton.Position = UDim2.new(0, 40, 0, 100)
-mainButton.BackgroundColor3 = Color3.fromRGB(50, 120, 255)
-mainButton.Text = "⚡ MAIN"
-mainButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-mainButton.TextSize = 18
-mainButton.Font = Enum.Font.GothamBold
-mainButton.BorderSizePixel = 0
-mainButton.Parent = contentFrame
+mainButton.Size = UDim2.new(0.8, 0, 0, 40)
+mainButton.Position = UDim2.new(0.1, 0, 0.4, 0)
+mainButton.Text = "Main (Get All Buildings)"
+mainButton.TextSize = 16
+mainButton.Font = Enum.Font.SourceSansSemibold
+mainButton.TextColor3 = Color3.new(0,1,0)
+mainButton.BackgroundColor3 = Color3.fromRGB(40, 100, 40)
+mainButton.Parent = mainFrame
 
-local mainBtnCorner = Instance.new("UICorner")
-mainBtnCorner.CornerRadius = UDim.new(0, 10)
-mainBtnCorner.Parent = mainButton
-
-local mainBtnGlow = Instance.new("UIStroke")
-mainBtnGlow.Color = Color3.fromRGB(100, 180, 255)
-mainBtnGlow.Thickness = 2
-mainBtnGlow.Transparency = 0.7
-mainBtnGlow.Parent = mainButton
-
--- Info button
+-- Tombol INFO
 local infoButton = Instance.new("TextButton")
-infoButton.Name = "InfoButton"
-infoButton.Size = UDim2.new(0, 300, 0, 40)
-infoButton.Position = UDim2.new(0, 40, 0, 160)
-infoButton.BackgroundColor3 = Color3.fromRGB(60, 70, 80)
-infoButton.Text = "🛡 INFO"
-infoButton.TextColor3 = Color3.fromRGB(180, 200, 220)
-infoButton.TextSize = 14
-infoButton.Font = Enum.Font.Gotham
-infoButton.BorderSizePixel = 0
-infoButton.Parent = contentFrame
+infoButton.Size = UDim2.new(0.8, 0, 0, 40)
+infoButton.Position = UDim2.new(0.1, 0, 0.7, 0)
+infoButton.Text = "Info"
+infoButton.TextSize = 16
+infoButton.Font = Enum.Font.SourceSans
+infoButton.TextColor3 = Color3.new(1,1,1)
+infoButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+infoButton.Parent = mainFrame
 
-local infoBtnCorner = Instance.new("UICorner")
-infoBtnCorner.CornerRadius = UDim.new(0, 8)
-infoBtnCorner.Parent = infoButton
+--===[ LOGIKA TOMBOL ]===--
 
-local infoBtnStroke = Instance.new("UIStroke")
-infoBtnStroke.Color = Color3.fromRGB(120, 140, 160)
-infoBtnStroke.Thickness = 1
-infoBtnStroke.Transparency = 0.5
-infoBtnStroke.Parent = infoButton
-
--- Status indicator
-local statusIndicator = Instance.new("Frame")
-statusIndicator.Size = UDim2.new(0, 120, 0, 20)
-statusIndicator.Position = UDim2.new(0, 140, 0, 210)
-statusIndicator.BackgroundTransparency = 1
-statusIndicator.Parent = contentFrame
-
-local statusDot = Instance.new("Frame")
-statusDot.Size = UDim2.new(0, 8, 0, 8)
-statusDot.Position = UDim2.new(0, 0, 0, 6)
-statusDot.BackgroundColor3 = Color3.fromRGB(50, 255, 100)
-statusDot.BorderSizePixel = 0
-statusDot.Parent = statusIndicator
-
-local statusDotCorner = Instance.new("UICorner")
-statusDotCorner.CornerRadius = UDim.new(1, 0)
-statusDotCorner.Parent = statusDot
-
-local statusText = Instance.new("TextLabel")
-statusText.Size = UDim2.new(0, 100, 1, 0)
-statusText.Position = UDim2.new(0, 15, 0, 0)
-statusText.BackgroundTransparency = 1
-statusText.Text = "SYSTEM READY"
-statusText.TextColor3 = Color3.fromRGB(150, 180, 200)
-statusText.TextSize = 10
-statusText.Font = Enum.Font.Gotham
-statusText.TextXAlignment = Enum.TextXAlignment.Left
-statusText.Parent = statusIndicator
-
--- Info dialog
-local infoDialog = Instance.new("Frame")
-infoDialog.Name = "InfoDialog"
-infoDialog.Size = UDim2.new(0, 300, 0, 350)
-infoDialog.Position = UDim2.new(0.5, -150, 0.5, -175)
-infoDialog.BackgroundColor3 = Color3.fromRGB(20, 25, 35)
-infoDialog.BorderSizePixel = 0
-infoDialog.Visible = false
-infoDialog.ZIndex = 10
-infoDialog.Parent = screenGui
-
-local dialogCorner = Instance.new("UICorner")
-dialogCorner.CornerRadius = UDim.new(0, 15)
-dialogCorner.Parent = infoDialog
-
-local dialogStroke = Instance.new("UIStroke")
-dialogStroke.Color = Color3.fromRGB(70, 130, 255)
-dialogStroke.Thickness = 2
-dialogStroke.Transparency = 0.2
-dialogStroke.Parent = infoDialog
-
--- Dialog background overlay
-local dialogOverlay = Instance.new("Frame")
-dialogOverlay.Name = "Overlay"
-dialogOverlay.Size = UDim2.new(1, 0, 1, 0)
-dialogOverlay.Position = UDim2.new(0, 0, 0, 0)
-dialogOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-dialogOverlay.BackgroundTransparency = 0.7
-dialogOverlay.BorderSizePixel = 0
-dialogOverlay.Visible = false
-dialogOverlay.ZIndex = 9
-dialogOverlay.Parent = screenGui
-
--- Dialog title
-local dialogTitle = Instance.new("TextLabel")
-dialogTitle.Size = UDim2.new(1, -40, 0, 30)
-dialogTitle.Position = UDim2.new(0, 20, 0, 15)
-dialogTitle.BackgroundTransparency = 1
-dialogTitle.Text = "🖥 Game Information"
-dialogTitle.TextColor3 = Color3.fromRGB(100, 200, 255)
-dialogTitle.TextSize = 18
-dialogTitle.Font = Enum.Font.GothamBold
-dialogTitle.TextXAlignment = Enum.TextXAlignment.Center
-dialogTitle.Parent = infoDialog
-
--- Dialog close button
-local dialogCloseBtn = Instance.new("TextButton")
-dialogCloseBtn.Size = UDim2.new(0, 25, 0, 25)
-dialogCloseBtn.Position = UDim2.new(1, -35, 0, 10)
-dialogCloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-dialogCloseBtn.Text = "×"
-dialogCloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-dialogCloseBtn.TextSize = 16
-dialogCloseBtn.Font = Enum.Font.GothamBold
-dialogCloseBtn.BorderSizePixel = 0
-dialogCloseBtn.Parent = infoDialog
-
-local dialogCloseBtnCorner = Instance.new("UICorner")
-dialogCloseBtnCorner.CornerRadius = UDim.new(0, 3)
-dialogCloseBtnCorner.Parent = dialogCloseBtn
-
--- Dialog content
-local dialogContent = Instance.new("ScrollingFrame")
-dialogContent.Size = UDim2.new(1, -40, 1, -80)
-dialogContent.Position = UDim2.new(0, 20, 0, 50)
-dialogContent.BackgroundTransparency = 1
-dialogContent.BorderSizePixel = 0
-dialogContent.ScrollBarThickness = 4
-dialogContent.ScrollBarImageColor3 = Color3.fromRGB(70, 130, 255)
-dialogContent.CanvasSize = UDim2.new(0, 0, 0, 280)
-dialogContent.Parent = infoDialog
-
--- Info text content
-local infoTexts = {
-    {label = "Game:", value = "[Hovercraft] War Tycoon", color = Color3.fromRGB(100, 200, 255)},
-    {label = "Version:", value = "v2.1.0", color = Color3.fromRGB(100, 255, 200)},
-    {label = "Developer:", value = "Future Tech Studios", color = Color3.fromRGB(255, 200, 100)},
-    {label = "Engine:", value = "Quantum Core 3D", color = Color3.fromRGB(200, 100, 255)},
-    {label = "Platform:", value = "Roblox Executor", color = Color3.fromRGB(255, 150, 150)},
-}
-
-for i, info in ipairs(infoTexts) do
-    local infoFrame = Instance.new("Frame")
-    infoFrame.Size = UDim2.new(1, 0, 0, 25)
-    infoFrame.Position = UDim2.new(0, 0, 0, (i-1) * 30)
-    infoFrame.BackgroundTransparency = 1
-    infoFrame.Parent = dialogContent
-    
-    local labelText = Instance.new("TextLabel")
-    labelText.Size = UDim2.new(0, 80, 1, 0)
-    labelText.Position = UDim2.new(0, 0, 0, 0)
-    labelText.BackgroundTransparency = 1
-    labelText.Text = info.label
-    labelText.TextColor3 = Color3.fromRGB(150, 170, 190)
-    labelText.TextSize = 12
-    labelText.Font = Enum.Font.Gotham
-    labelText.TextXAlignment = Enum.TextXAlignment.Left
-    labelText.Parent = infoFrame
-    
-    local valueText = Instance.new("TextLabel")
-    valueText.Size = UDim2.new(1, -90, 1, 0)
-    valueText.Position = UDim2.new(0, 90, 0, 0)
-    valueText.BackgroundTransparency = 1
-    valueText.Text = info.value
-    valueText.TextColor3 = info.color
-    valueText.TextSize = 12
-    valueText.Font = Enum.Font.GothamMedium
-    valueText.TextXAlignment = Enum.TextXAlignment.Left
-    valueText.Parent = infoFrame
-end
-
--- Copyright info
-local copyrightFrame = Instance.new("Frame")
-copyrightFrame.Size = UDim2.new(1, 0, 0, 60)
-copyrightFrame.Position = UDim2.new(0, 0, 0, 180)
-copyrightFrame.BackgroundTransparency = 1
-copyrightFrame.Parent = dialogContent
-
-local copyrightText = Instance.new("TextLabel")
-copyrightText.Size = UDim2.new(1, 0, 1, 0)
-copyrightText.Position = UDim2.new(0, 0, 0, 0)
-copyrightText.BackgroundTransparency = 1
-copyrightText.Text = "© 2024 Future Tech Studios\nAll rights reserved.\n\nPowered by Advanced\nHovercraft Technology"
-copyrightText.TextColor3 = Color3.fromRGB(120, 140, 160)
-copyrightText.TextSize = 10
-copyrightText.Font = Enum.Font.Gotham
-copyrightText.TextXAlignment = Enum.TextXAlignment.Center
-copyrightText.Parent = copyrightFrame
-
--- Animation variables
-local isMinimized = false
-local animationConnection
-
--- Animation functions
-local function createPulseAnimation(object, property, startValue, endValue, duration)
-    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
-    local tween = TweenService:Create(object, tweenInfo, {[property] = endValue})
-    tween:Play()
-    return tween
-end
-
-local function createFloatAnimation(object, startY, floatAmount, duration)
-    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
-    local tween = TweenService:Create(object, tweenInfo, {Position = UDim2.new(object.Position.X.Scale, object.Position.X.Offset, object.Position.Y.Scale, startY + floatAmount)})
-    tween:Play()
-    return tween
-end
-
--- Start animations
-local statusPulse = createPulseAnimation(statusDot, "BackgroundTransparency", 0, 0.3, 1)
-local hovercraftFloat = createFloatAnimation(hovercraftFrame, 10, -5, 2)
-local light1Pulse = createPulseAnimation(statusLight1, "BackgroundTransparency", 0, 0.4, 1.5)
-local light2Pulse = createPulseAnimation(statusLight2, "BackgroundTransparency", 0, 0.3, 1.2)
-
--- Button hover effects
-local function createHoverEffect(button, hoverColor, normalColor)
-    button.MouseEnter:Connect(function()
-        local tween = TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = hoverColor})
-        tween:Play()
-    end)
-    
-    button.MouseLeave:Connect(function()
-        local tween = TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = normalColor})
-        tween:Play()
-    end)
-end
-
--- Apply hover effects
-createHoverEffect(mainButton, Color3.fromRGB(70, 140, 255), Color3.fromRGB(50, 120, 255))
-createHoverEffect(infoButton, Color3.fromRGB(80, 90, 100), Color3.fromRGB(60, 70, 80))
-createHoverEffect(minimizeBtn, Color3.fromRGB(220, 170, 70), Color3.fromRGB(200, 150, 50))
-createHoverEffect(closeBtn, Color3.fromRGB(220, 70, 70), Color3.fromRGB(200, 50, 50))
-
--- Button click effects
-local function createClickEffect(button)
-    button.MouseButton1Click:Connect(function()
-        local originalSize = button.Size
-        local shrinkTween = TweenService:Create(button, TweenInfo.new(0.1), {Size = UDim2.new(originalSize.X.Scale * 0.95, originalSize.X.Offset * 0.95, originalSize.Y.Scale * 0.95, originalSize.Y.Offset * 0.95)})
-        shrinkTween:Play()
-        
-        shrinkTween.Completed:Connect(function()
-            local expandTween = TweenService:Create(button, TweenInfo.new(0.1), {Size = originalSize})
-            expandTween:Play()
-        end)
-    end)
-end
-
--- Apply click effects
-createClickEffect(mainButton)
-createClickEffect(infoButton)
-createClickEffect(minimizeBtn)
-createClickEffect(closeBtn)
-
--- Button functionality
-minimizeBtn.MouseButton1Click:Connect(function()
-    isMinimized = not isMinimized
-    local targetSize = isMinimized and UDim2.new(0, 400, 0, 40) or UDim2.new(0, 400, 0, 300)
-    local targetTransparency = isMinimized and 0.3 or 0
-    
-    local sizeTween = TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quart), {Size = targetSize})
-    local transparencyTween = TweenService:Create(contentFrame, TweenInfo.new(0.3), {BackgroundTransparency = targetTransparency})
-    
-    sizeTween:Play()
-    transparencyTween:Play()
-    
-    contentFrame.Visible = not isMinimized
-end)
-
-closeBtn.MouseButton1Click:Connect(function()
-    local closeTween = TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-        Size = UDim2.new(0, 0, 0, 0),
-        Position = UDim2.new(0, mainFrame.Position.X.Offset + 200, 0, mainFrame.Position.Y.Offset + 150)
-    })
-    closeTween:Play()
-    
-    closeTween.Completed:Connect(function()
-        screenGui:Destroy()
-    end)
-end)
-
-mainButton.MouseButton1Click:Connect(function()
-    -- Game launch functionality
-    local notification = Instance.new("TextLabel")
-    notification.Size = UDim2.new(0, 200, 0, 50)
-    notification.Position = UDim2.new(0.5, -100, 0, 50)
-    notification.BackgroundColor3 = Color3.fromRGB(50, 200, 100)
-    notification.Text = "🚀 Launching Game..."
-    notification.TextColor3 = Color3.fromRGB(255, 255, 255)
-    notification.TextSize = 14
-    notification.Font = Enum.Font.GothamBold
-    notification.BorderSizePixel = 0
-    notification.Parent = screenGui
-    
-    local notifCorner = Instance.new("UICorner")
-    notifCorner.CornerRadius = UDim.new(0, 8)
-    notifCorner.Parent = notification
-    
-    -- Animate notification
-    local slideIn = TweenService:Create(notification, TweenInfo.new(0.3), {Position = UDim2.new(0.5, -100, 0, 100)})
-    slideIn:Play()
-    
-    wait(2)
-    
-    local slideOut = TweenService:Create(notification, TweenInfo.new(0.3), {
-        Position = UDim2.new(0.5, -100, 0, 50),
-        BackgroundTransparency = 1,
-        TextTransparency = 1
-    })
-    slideOut:Play()
-    
-    slideOut.Completed:Connect(function()
-        notification:Destroy()
-    end)
-    
-    print("🎮 [Hovercraft] War Tycoon - Game Launched!")
-end)
-
-infoButton.MouseButton1Click:Connect(function()
-    infoDialog.Visible = true
-    dialogOverlay.Visible = true
-    
-    -- Animate dialog appearance
-    infoDialog.Size = UDim2.new(0, 0, 0, 0)
-    infoDialog.Position = UDim2.new(0.5, 0, 0.5, 0)
-    
-    local openTween = TweenService:Create(infoDialog, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = UDim2.new(0, 300, 0, 350),
-        Position = UDim2.new(0.5, -150, 0.5, -175)
-    })
-    openTween:Play()
-end)
-
-dialogCloseBtn.MouseButton1Click:Connect(function()
-    local closeTween = TweenService:Create(infoDialog, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-        Size = UDim2.new(0, 0, 0, 0),
-        Position = UDim2.new(0.5, 0, 0.5, 0)
-    })
-    closeTween:Play()
-    
-    closeTween.Completed:Connect(function()
-        infoDialog.Visible = false
-        dialogOverlay.Visible = false
-    end)
-end)
-
-dialogOverlay.MouseButton1Click:Connect(function()
-    dialogCloseBtn.MouseButton1Click:Fire()
-end)
-
--- Update shadow position when main frame moves
-local function updateShadow()
-    shadowFrame.Position = UDim2.new(0, mainFrame.Position.X.Offset + 5, 0, mainFrame.Position.Y.Offset + 5)
-end
-
--- Connect shadow update to frame movement
-RunService.Heartbeat:Connect(updateShadow)
-
--- Keyboard shortcuts
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    
-    if input.KeyCode == Enum.KeyCode.Space then
-        mainButton.MouseButton1Click:Fire()
-    elseif input.KeyCode == Enum.KeyCode.I then
-        infoButton.MouseButton1Click:Fire()
-    elseif input.KeyCode == Enum.KeyCode.Escape then
-        if infoDialog.Visible then
-            dialogCloseBtn.MouseButton1Click:Fire()
-        else
-            closeBtn.MouseButton1Click:Fire()
+-- Fungsi Minimize
+local minimized = false
+minimize.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    for _, child in pairs(mainFrame:GetChildren()) do
+        if child ~= title and child ~= minimize and child ~= exit then
+            child.Visible = not minimized
         end
     end
 end)
 
--- Welcome message
-wait(0.5)
-print("🚁 [Hovercraft] War Tycoon Launcher Loaded!")
-print("📋 Controls:")
-print("   • Drag window to move")
-print("   • Space: Launch game")
-print("   • I: Toggle info")
-print("   • Escape: Close")
-print("⚡ System Ready!")
+-- Fungsi Exit
+exit.MouseButton1Click:Connect(function()
+    screenGui:Destroy()
+end)
+
+-- Fungsi Get All Buildings
+local function getAllBuildings()
+    local tycoon = workspace:FindFirstChild("Tycoons"):FindFirstChild(player.Name .. "_Tycoon")
+    if not tycoon then return end
+
+    local buildings = tycoon:FindFirstChild("Buildings")
+    if not buildings then return end
+
+    for _, building in pairs(buildings:GetChildren()) do
+        if building:FindFirstChild("BuyPrompt") then
+            building.BuyPrompt:Destroy()
+        end
+        if building:FindFirstChild("Model") then
+            building.Model.Visible = true
+        end
+        if building:FindFirstChild("Built") then
+            building.Built.Value = true
+        end
+    end
+end
+
+mainButton.MouseButton1Click:Connect(getAllBuildings)
+
+-- Fungsi Info
+infoButton.MouseButton1Click:Connect(function()
+    game.StarterGui:SetCore("SendNotification", {
+        Title = "Info Developer";
+        Text = "Game by @Riee | Hovercraft War Tycoon";
+        Duration = 5;
+    })
+end)
+
+--===[ SELESAI ]===--

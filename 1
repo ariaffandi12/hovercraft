@@ -1,4 +1,4 @@
--- Script GUI + Fitur Get All Buildings (Roblox Lua)
+-- Script GUI + Fitur Tab Main dengan Submenu (Roblox Lua)
 -- Tempatkan ini di LocalScript dalam StarterGui
 
 --===[ GUI SETUP ]===--
@@ -12,7 +12,7 @@ screenGui.Parent = playerGui
 
 -- Frame utama
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 300, 0, 180)
+mainFrame.Size = UDim2.new(0, 300, 0, 200)
 mainFrame.Position = UDim2.new(0.3, 0, 0.3, 0)
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 mainFrame.BorderSizePixel = 0
@@ -30,7 +30,7 @@ title.Font = Enum.Font.SourceSansBold
 title.TextSize = 20
 title.Parent = mainFrame
 
--- Tombol Minimize
+-- Tombol Minimize (jadi ikon)
 local minimize = Instance.new("TextButton")
 minimize.Size = UDim2.new(0, 25, 0, 25)
 minimize.Position = UDim2.new(1, -55, 0, 5)
@@ -52,71 +52,100 @@ exit.TextColor3 = Color3.new(1,0.3,0.3)
 exit.BackgroundColor3 = Color3.fromRGB(50,50,50)
 exit.Parent = mainFrame
 
--- Tombol MAIN
-local mainButton = Instance.new("TextButton")
-mainButton.Size = UDim2.new(0.8, 0, 0, 40)
-mainButton.Position = UDim2.new(0.1, 0, 0.4, 0)
-mainButton.Text = "Main (Get All Buildings)"
-mainButton.TextSize = 16
-mainButton.Font = Enum.Font.SourceSansSemibold
-mainButton.TextColor3 = Color3.new(0,1,0)
-mainButton.BackgroundColor3 = Color3.fromRGB(40, 100, 40)
-mainButton.Parent = mainFrame
+-- Tombol Tab: Main
+local tabMain = Instance.new("TextButton")
+tabMain.Size = UDim2.new(0, 80, 0, 30)
+tabMain.Position = UDim2.new(0, 0, 0, 35)
+tabMain.Text = "Main"
+tabMain.Font = Enum.Font.SourceSans
+tabMain.TextSize = 16
+tabMain.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+tabMain.TextColor3 = Color3.new(1, 1, 1)
+tabMain.Parent = mainFrame
 
--- Tombol INFO
-local infoButton = Instance.new("TextButton")
-infoButton.Size = UDim2.new(0.8, 0, 0, 40)
-infoButton.Position = UDim2.new(0.1, 0, 0.7, 0)
-infoButton.Text = "Info"
-infoButton.TextSize = 16
-infoButton.Font = Enum.Font.SourceSans
-infoButton.TextColor3 = Color3.new(1,1,1)
-infoButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-infoButton.Parent = mainFrame
+-- Tombol Tab: Info
+local tabInfo = Instance.new("TextButton")
+tabInfo.Size = UDim2.new(0, 80, 0, 30)
+tabInfo.Position = UDim2.new(0, 0, 0, 70)
+tabInfo.Text = "Info"
+tabInfo.Font = Enum.Font.SourceSans
+tabInfo.TextSize = 16
+tabInfo.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+tabInfo.TextColor3 = Color3.new(1, 1, 1)
+tabInfo.Parent = mainFrame
 
---===[ LOGIKA TOMBOL ]===--
+-- Kontainer konten
+local contentFrame = Instance.new("Frame")
+contentFrame.Position = UDim2.new(0, 90, 0, 35)
+contentFrame.Size = UDim2.new(1, -90, 1, -40)
+contentFrame.BackgroundTransparency = 1
+contentFrame.Name = "ContentFrame"
+contentFrame.Parent = mainFrame
 
--- Fungsi Minimize
-local minimized = false
-minimize.MouseButton1Click:Connect(function()
-    minimized = not minimized
-    for _, child in pairs(mainFrame:GetChildren()) do
-        if child ~= title and child ~= minimize and child ~= exit then
-            child.Visible = not minimized
-        end
+-- Konten: MAIN
+local getAllBtn = Instance.new("TextButton")
+getAllBtn.Size = UDim2.new(1, -20, 0, 40)
+getAllBtn.Position = UDim2.new(0, 10, 0, 10)
+getAllBtn.Text = "Get All Buildings"
+getAllBtn.BackgroundColor3 = Color3.fromRGB(40, 100, 40)
+getAllBtn.TextColor3 = Color3.new(1, 1, 1)
+getAllBtn.Font = Enum.Font.SourceSansSemibold
+getAllBtn.TextSize = 16
+getAllBtn.Parent = contentFrame
+
+local espBtn = Instance.new("TextButton")
+espBtn.Size = UDim2.new(1, -20, 0, 40)
+espBtn.Position = UDim2.new(0, 10, 0, 60)
+espBtn.Text = "ESP Mode (Coming Soon)"
+espBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 40)
+espBtn.TextColor3 = Color3.new(1, 1, 1)
+espBtn.Font = Enum.Font.SourceSansSemibold
+espBtn.TextSize = 16
+espBtn.Parent = contentFrame
+
+-- Tombol ikon muncul saat minimize
+local iconBtn = Instance.new("TextButton")
+iconBtn.Size = UDim2.new(0, 100, 0, 30)
+iconBtn.Position = UDim2.new(0, 10, 0, 10)
+iconBtn.Text = "⚙ Hover UI"
+iconBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+iconBtn.TextColor3 = Color3.new(1, 1, 1)
+iconBtn.Visible = false
+iconBtn.Draggable = true
+iconBtn.Active = true
+iconBtn.Parent = screenGui
+
+--===[ FUNGSI ]===--
+local function showTab(tabName)
+    if tabName == "Main" then
+        getAllBtn.Visible = true
+        espBtn.Visible = true
+    else
+        getAllBtn.Visible = false
+        espBtn.Visible = false
     end
+end
+
+-- Logika tombol
+minimize.MouseButton1Click:Connect(function()
+    mainFrame.Visible = false
+    iconBtn.Visible = true
 end)
 
--- Fungsi Exit
+iconBtn.MouseButton1Click:Connect(function()
+    mainFrame.Visible = true
+    iconBtn.Visible = false
+end)
+
 exit.MouseButton1Click:Connect(function()
     screenGui:Destroy()
 end)
 
--- Fungsi Get All Buildings
-local function getAllBuildings()
-    local tycoon = workspace:FindFirstChild("Tycoons"):FindFirstChild(player.Name .. "_Tycoon")
-    if not tycoon then return end
+tabMain.MouseButton1Click:Connect(function()
+    showTab("Main")
+end)
 
-    local buildings = tycoon:FindFirstChild("Buildings")
-    if not buildings then return end
-
-    for _, building in pairs(buildings:GetChildren()) do
-        if building:FindFirstChild("BuyPrompt") then
-            building.BuyPrompt:Destroy()
-        end
-        if building:FindFirstChild("Model") then
-            building.Model.Visible = true
-        end
-        if building:FindFirstChild("Built") then
-            building.Built.Value = true
-        end
-    end
-end
-
-mainButton.MouseButton1Click:Connect(getAllBuildings)
-
--- Fungsi Info
-infoButton.MouseButton1Click:Connect(function()
+tabInfo.MouseButton1Click:Connect(function()
     game.StarterGui:SetCore("SendNotification", {
         Title = "Info Developer";
         Text = "Game by @Riee | Hovercraft War Tycoon";
@@ -124,4 +153,32 @@ infoButton.MouseButton1Click:Connect(function()
     })
 end)
 
---===[ SELESAI ]===--
+-- Fungsi Get All Buildings (dinamis)
+local function getAllBuildings()
+    local tycoonFolder = workspace:FindFirstChild("Tycoons")
+    if not tycoonFolder then return end
+
+    for _, tycoon in pairs(tycoonFolder:GetChildren()) do
+        if tycoon.Name:find(player.Name) then
+            local buildings = tycoon:FindFirstChild("Buildings")
+            if buildings then
+                for _, building in pairs(buildings:GetChildren()) do
+                    if building:FindFirstChild("BuyPrompt") then
+                        building.BuyPrompt:Destroy()
+                    end
+                    if building:FindFirstChild("Model") then
+                        building.Model.Visible = true
+                    end
+                    if building:FindFirstChild("Built") then
+                        building.Built.Value = true
+                    end
+                end
+            end
+        end
+    end
+end
+
+getAllBtn.MouseButton1Click:Connect(getAllBuildings)
+
+-- Tampilkan tab awal
+showTab("Main")

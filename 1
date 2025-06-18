@@ -12,7 +12,7 @@ screenGui.Parent = playerGui
 
 -- Frame utama
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 300, 0, 250)
+mainFrame.Size = UDim2.new(0, 300, 0, 300)
 mainFrame.Position = UDim2.new(0.3, 0, 0.3, 0)
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 mainFrame.BorderSizePixel = 0
@@ -113,6 +113,16 @@ moneyBtn.Font = Enum.Font.SourceSansSemibold
 moneyBtn.TextSize = 16
 moneyBtn.Parent = contentFrame
 
+local spawnBtn = Instance.new("TextButton")
+spawnBtn.Size = UDim2.new(1, -20, 0, 30)
+spawnBtn.Position = UDim2.new(0, 10, 0, 130)
+spawnBtn.Text = "Spawn Vehicle"
+spawnBtn.BackgroundColor3 = Color3.fromRGB(80, 40, 120)
+spawnBtn.TextColor3 = Color3.new(1, 1, 1)
+spawnBtn.Font = Enum.Font.SourceSansSemibold
+spawnBtn.TextSize = 16
+spawnBtn.Parent = contentFrame
+
 -- Tombol ikon muncul saat minimize
 local iconBtn = Instance.new("TextButton")
 iconBtn.Size = UDim2.new(0, 100, 0, 30)
@@ -131,6 +141,7 @@ local function showTab(tabName)
     getAllBtn.Visible = visible
     espBtn.Visible = visible
     moneyBtn.Visible = visible
+    spawnBtn.Visible = visible
 end
 
 -- Logika tombol
@@ -204,9 +215,19 @@ end
 
 -- Fungsi Free Money
 local function giveMoney()
-    local stats = player:FindFirstChild("leaderstats")
-    if stats and stats:FindFirstChild("Money") then
-        stats.Money.Value = stats.Money.Value + 100000
+    local remote = workspace:FindFirstChild("RemoteEvent") or game.ReplicatedStorage:FindFirstChild("RemoteEvent")
+    if remote then
+        remote:FireServer("Money", 100000)
+    end
+end
+
+-- Fungsi Spawn Vehicle
+local function spawnVehicle()
+    local vehicleModel = game.ReplicatedStorage:FindFirstChild("Jeep")
+    if vehicleModel then
+        local newVehicle = vehicleModel:Clone()
+        newVehicle.Parent = workspace
+        newVehicle:SetPrimaryPartCFrame(player.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -15))
     end
 end
 
@@ -214,6 +235,7 @@ end
 getAllBtn.MouseButton1Click:Connect(getAllBuildings)
 espBtn.MouseButton1Click:Connect(enableESP)
 moneyBtn.MouseButton1Click:Connect(giveMoney)
+spawnBtn.MouseButton1Click:Connect(spawnVehicle)
 
 -- Tampilkan tab awal
 showTab("Main")

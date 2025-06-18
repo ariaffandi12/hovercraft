@@ -1,6 +1,5 @@
--- [Hovercrafts] War Tycoon Mobile Bypass Script
--- Game ID: 4639625707
--- Support: PC & Mobile dengan Anti-Detection Bypass
+-- [Hovercrafts] War Tycoon - Dynamic Auto Upgrade System
+-- Auto upgrade base tanpa money dengan deteksi dinamis
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -9,209 +8,111 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
-local GuiService = game:GetService("GuiService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Deteksi Platform
-local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
-local isPC = UserInputService.KeyboardEnabled
-
--- Anti-Detection & Bypass System
-local BypassSystem = {
-    hooks = {},
-    originalFunctions = {},
-    protectedConnections = {},
-    spoofedValues = {},
-    antiKick = true,
-    antiTeleportDetection = true,
-    antiSpeedDetection = true
-}
-
--- Bypass Anti-Cheat Functions
-local function setupBypass()
-    -- Hook dan spoof fungsi deteksi
-    local mt = getrawmetatable(game)
-    local oldNamecall = mt.__namecall
-    local oldIndex = mt.__index
-    local oldNewindex = mt.__newindex
-    
-    setreadonly(mt, false)
-    
-    -- Bypass __namecall detection
-    mt.__namecall = newcclosure(function(self, ...)
-        local method = getnamecallmethod()
-        local args = {...}
-        
-        -- Bypass kick detection
-        if method == "Kick" and BypassSystem.antiKick then
-            return
-        end
-        
-        -- Bypass teleport detection
-        if method == "FireServer" and tostring(self):find("Teleport") and BypassSystem.antiTeleportDetection then
-            return
-        end
-        
-        -- Bypass speed detection
-        if method == "FireServer" and tostring(self):find("Speed") and BypassSystem.antiSpeedDetection then
-            return
-        end
-        
-        return oldNamecall(self, ...)
-    end)
-    
-    -- Bypass __index detection
-    mt.__index = newcclosure(function(self, key)
-        -- Spoof WalkSpeed reading
-        if self == player.Character and self:FindFirstChild("Humanoid") and key == "WalkSpeed" then
-            if BypassSystem.spoofedValues.walkSpeed then
-                return 16 -- Return normal speed to anti-cheat
-            end
-        end
-        
-        -- Spoof JumpPower reading
-        if self == player.Character and self:FindFirstChild("Humanoid") and key == "JumpPower" then
-            if BypassSystem.spoofedValues.jumpPower then
-                return 50 -- Return normal jump to anti-cheat
-            end
-        end
-        
-        return oldIndex(self, key)
-    end)
-    
-    -- Bypass __newindex detection
-    mt.__newindex = newcclosure(function(self, key, value)
-        -- Allow our modifications but hide from detection
-        if self == player.Character and self:FindFirstChild("Humanoid") then
-            if key == "WalkSpeed" and value > 16 then
-                BypassSystem.spoofedValues.walkSpeed = true
-            elseif key == "JumpPower" and value > 50 then
-                BypassSystem.spoofedValues.jumpPower = true
-            end
-        end
-        
-        return oldNewindex(self, key, value)
-    end)
-    
-    setreadonly(mt, true)
-    
-    -- Bypass Remote Event Detection
-    for _, remote in pairs(ReplicatedStorage:GetDescendants()) do
-        if remote:IsA("RemoteEvent") and (remote.Name:find("Anti") or remote.Name:find("Detect") or remote.Name:find("Check")) then
-            remote.OnClientEvent:Connect(function() end) -- Block anti-cheat events
-        end
-    end
-    
-    print("🛡️ Bypass system initialized!")
-end
-
--- Mobile Support Functions
-local function createMobileButton(name, position, size, callback)
-    local button = Instance.new("TextButton")
-    button.Name = name
-    button.Size = size or UDim2.new(0, 80, 0, 80)
-    button.Position = position
-    button.BackgroundColor3 = Color3.fromRGB(50, 120, 255)
-    button.Text = name
-    button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    button.TextSize = 12
-    button.Font = Enum.Font.GothamBold
-    button.BorderSizePixel = 0
-    button.Parent = playerGui
-    
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = button
-    
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(100, 180, 255)
-    stroke.Thickness = 2
-    stroke.Transparency = 0.5
-    stroke.Parent = button
-    
-    button.MouseButton1Click:Connect(callback)
-    
-    -- Touch support
-    button.TouchTap:Connect(callback)
-    
-    return button
-end
-
--- Hapus GUI yang sudah ada
-if playerGui:FindFirstChild("HovercraftBypassGUI") then
-    playerGui.HovercraftBypassGUI:Destroy()
-end
-
--- Main Hack System
-local HovercraftHack = {
+-- Dynamic Auto Upgrade System
+local AutoUpgradeSystem = {
     enabled = false,
-    features = {
-        autoCollectMoney = false,
-        autoUpgrade = false,
-        autoRebirth = false,
-        infiniteMoney = false,
-        speedHack = false,
-        flyHack = false,
-        noclip = false,
-        esp = false,
-        aimbot = false,
-        autoCapture = false,
-        godMode = false,
-        teleportToBase = false,
-        autoFarm = false,
-        killAura = false
-    },
     connections = {},
-    originalValues = {},
-    gui = nil,
-    mobileButtons = {}
+    detectedElements = {
+        upgradeButtons = {},
+        buildingPads = {},
+        purchaseButtons = {},
+        unlockButtons = {},
+        remoteEvents = {},
+        buildingModels = {}
+    },
+    scanPatterns = {
+        buttonTexts = {
+            "upgrade", "buy", "purchase", "unlock", "build", "construct", 
+            "improve", "enhance", "level up", "advance", "develop",
+            "expand", "install", "activate", "enable", "acquire"
+        },
+        buttonNames = {
+            "UpgradeButton", "BuyButton", "PurchaseButton", "UnlockButton",
+            "BuildButton", "ConstructButton", "InstallButton", "ActivateButton"
+        },
+        remoteNames = {
+            "Upgrade", "Buy", "Purchase", "Unlock", "Build", "Construct",
+            "Install", "Activate", "BuyItem", "PurchaseItem", "UnlockItem"
+        },
+        padNames = {
+            "Pad", "Platform", "Foundation", "Base", "Plot", "Spot",
+            "Area", "Zone", "Space", "Location", "Position"
+        },
+        buildingIndicators = {
+            "Building", "Structure", "Facility", "Unit", "Tower", "Factory",
+            "Generator", "Producer", "Collector", "Processor", "Station"
+        }
+    },
+    bypassMethods = {
+        moneyBypass = true,
+        requirementBypass = true,
+        cooldownBypass = true,
+        levelBypass = true
+    },
+    upgradeQueue = {},
+    lastScanTime = 0,
+    scanInterval = 2,
+    upgradeDelay = 0.5,
+    maxUpgradesPerCycle = 10
 }
 
 -- Enhanced Notification System
 local function createNotification(text, color, duration)
     local notification = Instance.new("ScreenGui")
-    notification.Name = "Notification"
+    notification.Name = "AutoUpgradeNotification"
     notification.Parent = playerGui
     
     local frame = Instance.new("Frame")
-    frame.Size = isMobile and UDim2.new(0, 280, 0, 70) or UDim2.new(0, 300, 0, 60)
-    frame.Position = UDim2.new(1, -320, 0, 20)
+    frame.Size = UDim2.new(0, 320, 0, 70)
+    frame.Position = UDim2.new(1, -340, 0, 20)
     frame.BackgroundColor3 = color or Color3.fromRGB(50, 200, 100)
     frame.BorderSizePixel = 0
     frame.Parent = notification
     
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
+    corner.CornerRadius = UDim.new(0, 12)
     corner.Parent = frame
     
     local stroke = Instance.new("UIStroke")
     stroke.Color = Color3.fromRGB(255, 255, 255)
-    stroke.Thickness = 1
+    stroke.Thickness = 2
     stroke.Transparency = 0.7
     stroke.Parent = frame
     
+    local icon = Instance.new("TextLabel")
+    icon.Size = UDim2.new(0, 50, 0, 50)
+    icon.Position = UDim2.new(0, 10, 0, 10)
+    icon.BackgroundTransparency = 1
+    icon.Text = "⚡"
+    icon.TextColor3 = Color3.fromRGB(255, 255, 255)
+    icon.TextSize = 24
+    icon.Font = Enum.Font.GothamBold
+    icon.Parent = frame
+    
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -20, 1, 0)
-    label.Position = UDim2.new(0, 10, 0, 0)
+    label.Size = UDim2.new(1, -70, 1, 0)
+    label.Position = UDim2.new(0, 60, 0, 0)
     label.BackgroundTransparency = 1
     label.Text = text
     label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    label.TextSize = isMobile and 12 or 14
+    label.TextSize = 14
     label.Font = Enum.Font.GothamBold
     label.TextWrapped = true
+    label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = frame
     
-    -- Animasi masuk
+    -- Animation
     frame.Position = UDim2.new(1, 0, 0, 20)
-    local slideIn = TweenService:Create(frame, TweenInfo.new(0.3), {Position = UDim2.new(1, -320, 0, 20)})
+    local slideIn = TweenService:Create(frame, TweenInfo.new(0.3), {Position = UDim2.new(1, -340, 0, 20)})
     slideIn:Play()
     
-    -- Hapus setelah durasi
     spawn(function()
-        wait(duration or 3)
+        wait(duration or 4)
         local slideOut = TweenService:Create(frame, TweenInfo.new(0.3), {Position = UDim2.new(1, 0, 0, 20)})
         slideOut:Play()
         slideOut.Completed:Connect(function()
@@ -220,858 +121,673 @@ local function createNotification(text, color, duration)
     end)
 end
 
--- Enhanced Game Detection with Bypass
-local function detectGameElements()
-    local gameElements = {
-        moneyGui = nil,
+-- Dynamic Element Scanner
+local function scanForUpgradeElements()
+    local currentTime = tick()
+    if currentTime - AutoUpgradeSystem.lastScanTime < AutoUpgradeSystem.scanInterval then
+        return AutoUpgradeSystem.detectedElements
+    end
+    
+    AutoUpgradeSystem.lastScanTime = currentTime
+    
+    -- Clear previous scan results
+    AutoUpgradeSystem.detectedElements = {
         upgradeButtons = {},
-        rebirthButton = nil,
-        tycoonBase = nil,
-        hovercrafts = {},
-        enemies = {},
-        capturePoints = {},
-        moneyDroppers = {},
-        buildings = {}
+        buildingPads = {},
+        purchaseButtons = {},
+        unlockButtons = {},
+        remoteEvents = {},
+        buildingModels = {}
     }
     
-    -- Bypass detection saat scanning
-    local oldWarn = warn
-    warn = function() end
+    print("🔍 Scanning for upgrade elements...")
     
-    -- Cari elemen GUI uang dengan bypass
+    -- Scan GUI elements
+    local function scanGuiElement(element, parent)
+        if not element or not element.Parent then return end
+        
+        local elementName = element.Name:lower()
+        local elementText = ""
+        
+        if element:IsA("TextButton") or element:IsA("TextLabel") then
+            elementText = element.Text:lower()
+        end
+        
+        -- Check for upgrade buttons
+        for _, pattern in ipairs(AutoUpgradeSystem.scanPatterns.buttonTexts) do
+            if elementText:find(pattern) or elementName:find(pattern) then
+                local buttonData = {
+                    element = element,
+                    type = "upgrade",
+                    text = element.Text or "",
+                    name = element.Name,
+                    parent = parent,
+                    position = element.AbsolutePosition,
+                    size = element.AbsoluteSize,
+                    visible = element.Visible,
+                    active = element.Active,
+                    priority = 1
+                }
+                
+                -- Determine button priority based on text
+                if elementText:find("upgrade") then
+                    buttonData.priority = 1
+                elseif elementText:find("unlock") then
+                    buttonData.priority = 2
+                elseif elementText:find("buy") or elementText:find("purchase") then
+                    buttonData.priority = 3
+                end
+                
+                table.insert(AutoUpgradeSystem.detectedElements.upgradeButtons, buttonData)
+                print("📱 Found upgrade button: " .. element.Name .. " - " .. (element.Text or ""))
+            end
+        end
+        
+        -- Check for button names
+        for _, pattern in ipairs(AutoUpgradeSystem.scanPatterns.buttonNames) do
+            if elementName:find(pattern:lower()) then
+                local buttonData = {
+                    element = element,
+                    type = "named",
+                    text = element.Text or "",
+                    name = element.Name,
+                    parent = parent,
+                    position = element.AbsolutePosition,
+                    size = element.AbsoluteSize,
+                    visible = element.Visible,
+                    active = element.Active,
+                    priority = 2
+                }
+                
+                table.insert(AutoUpgradeSystem.detectedElements.upgradeButtons, buttonData)
+                print("📱 Found named button: " .. element.Name)
+            end
+        end
+    end
+    
+    -- Scan all GUI elements
     for _, gui in pairs(playerGui:GetDescendants()) do
-        if gui:IsA("TextLabel") then
-            local text = gui.Text:lower()
-            if text:find("$") or text:find("money") or text:find("cash") or text:find("coin") then
-                gameElements.moneyGui = gui
-                break
-            end
+        if gui:IsA("TextButton") or gui:IsA("ImageButton") then
+            scanGuiElement(gui, gui.Parent)
         end
     end
     
-    -- Cari tombol upgrade dengan pattern matching
-    for _, button in pairs(playerGui:GetDescendants()) do
-        if button:IsA("TextButton") or button:IsA("ImageButton") then
-            local text = button.Text:lower()
-            if text:find("upgrade") or text:find("buy") or text:find("purchase") or text:find("unlock") then
-                table.insert(gameElements.upgradeButtons, button)
-            end
-        end
-    end
-    
-    -- Cari base tycoon dengan multiple methods
-    local possibleBases = {}
-    
-    if Workspace:FindFirstChild("Tycoons") then
-        for _, tycoon in pairs(Workspace.Tycoons:GetChildren()) do
-            if tycoon.Name:find(player.Name) or 
-               (tycoon:FindFirstChild("Owner") and tycoon.Owner.Value == player) or
-               (tycoon:FindFirstChild("PlayerName") and tycoon.PlayerName.Value == player.Name) then
-                gameElements.tycoonBase = tycoon
-                break
-            end
-        end
-    end
-    
-    -- Cari di workspace langsung
-    for _, obj in pairs(Workspace:GetChildren()) do
-        if obj.Name:find(player.Name) and obj:IsA("Model") then
-            gameElements.tycoonBase = obj
-            break
-        end
-    end
-    
-    -- Cari money droppers
-    if gameElements.tycoonBase then
-        for _, obj in pairs(gameElements.tycoonBase:GetDescendants()) do
-            if obj:IsA("BasePart") then
-                local name = obj.Name:lower()
-                if name:find("money") or name:find("cash") or name:find("coin") or name:find("drop") then
-                    table.insert(gameElements.moneyDroppers, obj)
-                end
-            end
-        end
-    end
-    
-    -- Cari hovercrafts dengan advanced detection
-    for _, obj in pairs(Workspace:GetDescendants()) do
-        if obj:IsA("Model") or obj:IsA("BasePart") then
-            local name = obj.Name:lower()
-            if name:find("hovercraft") or name:find("vehicle") or name:find("tank") or name:find("boat") then
-                table.insert(gameElements.hovercrafts, obj)
-            end
-        end
-    end
-    
-    -- Cari enemies
-    for _, otherPlayer in pairs(Players:GetPlayers()) do
-        if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            table.insert(gameElements.enemies, otherPlayer.Character)
-        end
-    end
-    
-    -- Cari capture points
-    for _, obj in pairs(Workspace:GetDescendants()) do
-        if obj:IsA("BasePart") then
-            local name = obj.Name:lower()
-            if name:find("capture") or name:find("point") or name:find("flag") or name:find("zone") then
-                table.insert(gameElements.capturePoints, obj)
-            end
-        end
-    end
-    
-    warn = oldWarn -- Restore warn function
-    
-    return gameElements
-end
-
--- Enhanced Auto Collect Money with Bypass
-local function autoCollectMoney()
-    if not HovercraftHack.features.autoCollectMoney then return end
-    
-    local gameElements = detectGameElements()
-    
-    -- Collect dari money droppers
-    for _, dropper in pairs(gameElements.moneyDroppers) do
-        if dropper and dropper.Parent and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local distance = (player.Character.HumanoidRootPart.Position - dropper.Position).Magnitude
-            if distance < 50 then
-                -- Bypass teleport detection
-                local oldCFrame = player.Character.HumanoidRootPart.CFrame
-                player.Character.HumanoidRootPart.CFrame = dropper.CFrame
-                wait(0.1)
-                player.Character.HumanoidRootPart.CFrame = oldCFrame
-            end
-        end
-    end
-    
-    -- Cari money parts yang bisa disentuh
-    if gameElements.tycoonBase then
-        for _, obj in pairs(gameElements.tycoonBase:GetDescendants()) do
-            if obj:IsA("BasePart") and obj.CanTouch then
-                local name = obj.Name:lower()
-                if name:find("money") or name:find("cash") or name:find("coin") then
-                    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                        firetouchinterest(player.Character.HumanoidRootPart, obj, 0)
-                        firetouchinterest(player.Character.HumanoidRootPart, obj, 1)
-                    end
-                end
-            end
-        end
-    end
-end
-
--- Enhanced Auto Upgrade with Smart Detection
-local function autoUpgrade()
-    if not HovercraftHack.features.autoUpgrade then return end
-    
-    local gameElements = detectGameElements()
-    
-    for _, button in pairs(gameElements.upgradeButtons) do
-        if button and button.Visible and button.Active and button.Parent then
-            -- Bypass click detection
-            spawn(function()
-                -- Try multiple click methods
-                if button.MouseButton1Click then
-                    for _, connection in pairs(getconnections(button.MouseButton1Click)) do
-                        connection:Fire()
-                    end
-                end
+    -- Scan workspace for building pads and models
+    local function scanWorkspaceElement(element)
+        if not element or not element.Parent then return end
+        
+        local elementName = element.Name:lower()
+        
+        -- Check for building pads
+        for _, pattern in ipairs(AutoUpgradeSystem.scanPatterns.padNames) do
+            if elementName:find(pattern) then
+                local padData = {
+                    element = element,
+                    type = "pad",
+                    name = element.Name,
+                    position = element.Position,
+                    size = element.Size,
+                    canCollide = element.CanCollide,
+                    transparency = element.Transparency,
+                    color = element.Color
+                }
                 
-                if button.Activated then
-                    for _, connection in pairs(getconnections(button.Activated)) do
-                        connection:Fire()
-                    end
+                table.insert(AutoUpgradeSystem.detectedElements.buildingPads, padData)
+                print("🏗️ Found building pad: " .. element.Name)
+            end
+        end
+        
+        -- Check for building models
+        if element:IsA("Model") then
+            for _, pattern in ipairs(AutoUpgradeSystem.scanPatterns.buildingIndicators) do
+                if elementName:find(pattern) then
+                    local modelData = {
+                        element = element,
+                        type = "building",
+                        name = element.Name,
+                        position = element:GetModelCFrame().Position,
+                        size = element:GetExtentsSize(),
+                        parts = #element:GetChildren()
+                    }
+                    
+                    table.insert(AutoUpgradeSystem.detectedElements.buildingModels, modelData)
+                    print("🏢 Found building model: " .. element.Name)
                 end
-                
-                -- Virtual click for mobile
-                if isMobile then
-                    VirtualInputManager:SendMouseButtonEvent(button.AbsolutePosition.X + button.AbsoluteSize.X/2, 
-                                                           button.AbsolutePosition.Y + button.AbsoluteSize.Y/2, 
-                                                           0, true, game, 1)
-                    wait(0.1)
-                    VirtualInputManager:SendMouseButtonEvent(button.AbsolutePosition.X + button.AbsoluteSize.X/2, 
-                                                           button.AbsolutePosition.Y + button.AbsoluteSize.Y/2, 
-                                                           0, false, game, 1)
-                end
-            end)
-            wait(0.5)
+            end
         end
     end
+    
+    -- Scan workspace
+    for _, element in pairs(Workspace:GetDescendants()) do
+        if element:IsA("BasePart") or element:IsA("Model") then
+            scanWorkspaceElement(element)
+        end
+    end
+    
+    -- Scan for remote events
+    for _, remote in pairs(ReplicatedStorage:GetDescendants()) do
+        if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
+            local remoteName = remote.Name:lower()
+            
+            for _, pattern in ipairs(AutoUpgradeSystem.scanPatterns.remoteNames) do
+                if remoteName:find(pattern:lower()) then
+                    local remoteData = {
+                        element = remote,
+                        type = "remote",
+                        name = remote.Name,
+                        className = remote.ClassName,
+                        parent = remote.Parent.Name
+                    }
+                    
+                    table.insert(AutoUpgradeSystem.detectedElements.remoteEvents, remoteData)
+                    print("📡 Found upgrade remote: " .. remote.Name)
+                end
+            end
+        end
+    end
+    
+    -- Sort buttons by priority
+    table.sort(AutoUpgradeSystem.detectedElements.upgradeButtons, function(a, b)
+        return a.priority < b.priority
+    end)
+    
+    local totalFound = #AutoUpgradeSystem.detectedElements.upgradeButtons + 
+                     #AutoUpgradeSystem.detectedElements.buildingPads + 
+                     #AutoUpgradeSystem.detectedElements.remoteEvents
+    
+    print(string.format("✅ Scan complete! Found %d upgrade elements", totalFound))
+    
+    return AutoUpgradeSystem.detectedElements
 end
 
--- Enhanced Infinite Money with Multiple Methods
-local function infiniteMoney()
-    if not HovercraftHack.features.infiniteMoney then return end
+-- Money Bypass System
+local function bypassMoneyRequirement(button)
+    if not AutoUpgradeSystem.bypassMethods.moneyBypass then return false end
     
-    -- Method 1: Leaderstats manipulation
+    -- Method 1: Modify leaderstats
     if player:FindFirstChild("leaderstats") then
         for _, stat in pairs(player.leaderstats:GetChildren()) do
-            local name = stat.Name:lower()
-            if name:find("money") or name:find("cash") or name:find("coin") or name:find("dollar") then
-                if stat:IsA("IntValue") or stat:IsA("NumberValue") then
-                    stat.Value = 999999
-                end
+            local statName = stat.Name:lower()
+            if statName:find("money") or statName:find("cash") or statName:find("coin") then
+                local originalValue = stat.Value
+                stat.Value = 999999999
+                
+                spawn(function()
+                    wait(1)
+                    stat.Value = originalValue
+                end)
+                
+                print("💰 Bypassed money requirement via leaderstats")
+                return true
             end
         end
     end
     
-    -- Method 2: GUI manipulation
-    local gameElements = detectGameElements()
-    if gameElements.moneyGui then
-        gameElements.moneyGui.Text = "$999,999"
+    -- Method 2: Hook remote events
+    local mt = getrawmetatable(game)
+    local oldNamecall = mt.__namecall
+    
+    setreadonly(mt, false)
+    mt.__namecall = newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        local args = {...}
+        
+        if method == "FireServer" and self.Name:lower():find("money") then
+            -- Spoof money check
+            return true
+        end
+        
+        return oldNamecall(self, ...)
+    end)
+    setreadonly(mt, true)
+    
+    print("💰 Money bypass hook installed")
+    return true
+end
+
+-- Advanced Button Clicking System
+local function clickUpgradeButton(buttonData)
+    local button = buttonData.element
+    if not button or not button.Parent or not button.Visible or not button.Active then
+        return false
     end
     
-    -- Method 3: Remote manipulation
-    for _, remote in pairs(ReplicatedStorage:GetDescendants()) do
-        if remote:IsA("RemoteEvent") and remote.Name:lower():find("money") then
-            remote:FireServer(999999)
-        end
-    end
-end
-
--- Enhanced Movement Hacks with Bypass
-local function speedHack(enabled, speed)
-    if player.Character and player.Character:FindFirstChild("Humanoid") then
-        if enabled then
-            HovercraftHack.originalValues.walkSpeed = player.Character.Humanoid.WalkSpeed
-            player.Character.Humanoid.WalkSpeed = speed or 100
-            BypassSystem.spoofedValues.walkSpeed = true
-        else
-            player.Character.Humanoid.WalkSpeed = HovercraftHack.originalValues.walkSpeed or 16
-            BypassSystem.spoofedValues.walkSpeed = false
-        end
-    end
-end
-
-local function jumpHack(enabled, power)
-    if player.Character and player.Character:FindFirstChild("Humanoid") then
-        if enabled then
-            HovercraftHack.originalValues.jumpPower = player.Character.Humanoid.JumpPower
-            player.Character.Humanoid.JumpPower = power or 150
-            BypassSystem.spoofedValues.jumpPower = true
-        else
-            player.Character.Humanoid.JumpPower = HovercraftHack.originalValues.jumpPower or 50
-            BypassSystem.spoofedValues.jumpPower = false
-        end
-    end
-end
-
--- Enhanced Fly Hack with Mobile Support
-local function flyHack(enabled)
-    if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
+    print("🔄 Attempting to click: " .. button.Name)
     
-    if enabled then
-        local bodyVelocity = Instance.new("BodyVelocity")
-        bodyVelocity.MaxForce = Vector3.new(4000, 4000, 4000)
-        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-        bodyVelocity.Parent = player.Character.HumanoidRootPart
+    -- Bypass money requirement first
+    bypassMoneyRequirement(button)
+    
+    local success = false
+    
+    -- Method 1: Direct connection firing
+    if button.MouseButton1Click then
+        local connections = getconnections(button.MouseButton1Click)
+        for _, connection in pairs(connections) do
+            spawn(function()
+                connection:Fire()
+            end)
+            success = true
+        end
+    end
+    
+    -- Method 2: Activated event
+    if button.Activated then
+        local connections = getconnections(button.Activated)
+        for _, connection in pairs(connections) do
+            spawn(function()
+                connection:Fire()
+            end)
+            success = true
+        end
+    end
+    
+    -- Method 3: Virtual input (for mobile support)
+    if UserInputService.TouchEnabled then
+        local buttonPos = button.AbsolutePosition
+        local buttonSize = button.AbsoluteSize
+        local clickX = buttonPos.X + buttonSize.X / 2
+        local clickY = buttonPos.Y + buttonSize.Y / 2
         
-        local bodyAngularVelocity = Instance.new("BodyAngularVelocity")
-        bodyAngularVelocity.MaxTorque = Vector3.new(0, math.huge, 0)
-        bodyAngularVelocity.AngularVelocity = Vector3.new(0, 0, 0)
-        bodyAngularVelocity.Parent = player.Character.HumanoidRootPart
-        
-        -- PC Controls
-        if isPC then
-            HovercraftHack.connections.flyConnection = UserInputService.InputBegan:Connect(function(input)
-                if input.KeyCode == Enum.KeyCode.Space then
-                    bodyVelocity.Velocity = Vector3.new(0, 50, 0)
-                elseif input.KeyCode == Enum.KeyCode.LeftShift then
-                    bodyVelocity.Velocity = Vector3.new(0, -50, 0)
+        VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, true, game, 1)
+        wait(0.1)
+        VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, false, game, 1)
+        success = true
+    end
+    
+    -- Method 4: GuiService click simulation
+    pcall(function()
+        game:GetService("GuiService"):Click(button)
+        success = true
+    end)
+    
+    -- Method 5: Remote event firing
+    for _, remoteData in pairs(AutoUpgradeSystem.detectedElements.remoteEvents) do
+        local remote = remoteData.element
+        if remote and remote.Parent then
+            spawn(function()
+                if remote:IsA("RemoteEvent") then
+                    remote:FireServer(button.Name, "upgrade", true)
+                elseif remote:IsA("RemoteFunction") then
+                    remote:InvokeServer(button.Name, "upgrade", true)
                 end
             end)
-            
-            HovercraftHack.connections.flyEndConnection = UserInputService.InputEnded:Connect(function(input)
-                if input.KeyCode == Enum.KeyCode.Space or input.KeyCode == Enum.KeyCode.LeftShift then
-                    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-                end
-            end)
+            success = true
         end
-        
-        -- Mobile Controls
-        if isMobile then
-            local flyUpBtn = createMobileButton("↑", UDim2.new(1, -100, 1, -180), UDim2.new(0, 40, 0, 40), function()
-                bodyVelocity.Velocity = Vector3.new(0, 50, 0)
-                wait(0.1)
-                bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-            end)
-            
-            local flyDownBtn = createMobileButton("↓", UDim2.new(1, -100, 1, -130), UDim2.new(0, 40, 0, 40), function()
-                bodyVelocity.Velocity = Vector3.new(0, -50, 0)
-                wait(0.1)
-                bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-            end)
-            
-            HovercraftHack.mobileButtons.flyUp = flyUpBtn
-            HovercraftHack.mobileButtons.flyDown = flyDownBtn
-        end
-        
+    end
+    
+    if success then
+        print("✅ Successfully clicked: " .. button.Name)
+        createNotification("⚡ Upgraded: " .. button.Name, Color3.fromRGB(100, 255, 100), 2)
     else
-        -- Cleanup
-        if player.Character.HumanoidRootPart:FindFirstChild("BodyVelocity") then
-            player.Character.HumanoidRootPart.BodyVelocity:Destroy()
-        end
-        if player.Character.HumanoidRootPart:FindFirstChild("BodyAngularVelocity") then
-            player.Character.HumanoidRootPart.BodyAngularVelocity:Destroy()
-        end
-        
-        -- Disconnect connections
-        if HovercraftHack.connections.flyConnection then
-            HovercraftHack.connections.flyConnection:Disconnect()
-        end
-        if HovercraftHack.connections.flyEndConnection then
-            HovercraftHack.connections.flyEndConnection:Disconnect()
-        end
-        
-        -- Remove mobile buttons
-        if HovercraftHack.mobileButtons.flyUp then
-            HovercraftHack.mobileButtons.flyUp:Destroy()
-        end
-        if HovercraftHack.mobileButtons.flyDown then
-            HovercraftHack.mobileButtons.flyDown:Destroy()
-        end
+        print("❌ Failed to click: " .. button.Name)
     end
+    
+    return success
 end
 
--- Enhanced NoClip with Bypass
-local function noclip(enabled)
-    if not player.Character then return end
+-- Smart Upgrade Logic
+local function performSmartUpgrade()
+    if not AutoUpgradeSystem.enabled then return end
     
-    if enabled then
-        HovercraftHack.connections.noclipConnection = RunService.Stepped:Connect(function()
-            for _, part in pairs(player.Character:GetChildren()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
+    -- Scan for new elements
+    local elements = scanForUpgradeElements()
+    
+    local upgradesPerformed = 0
+    local maxUpgrades = AutoUpgradeSystem.maxUpgradesPerCycle
+    
+    -- Process upgrade buttons
+    for _, buttonData in ipairs(elements.upgradeButtons) do
+        if upgradesPerformed >= maxUpgrades then break end
+        
+        local button = buttonData.element
+        if button and button.Parent and button.Visible and button.Active then
+            -- Check if button is actually clickable
+            local buttonText = button.Text:lower()
+            
+            -- Skip if button indicates insufficient funds (unless we're bypassing)
+            if not AutoUpgradeSystem.bypassMethods.moneyBypass then
+                if buttonText:find("insufficient") or buttonText:find("not enough") or buttonText:find("need more") then
+                    continue
                 end
             end
-        end)
-    else
-        if HovercraftHack.connections.noclipConnection then
-            HovercraftHack.connections.noclipConnection:Disconnect()
-        end
-        for _, part in pairs(player.Character:GetChildren()) do
-            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-                part.CanCollide = true
+            
+            -- Skip if button is on cooldown
+            if not AutoUpgradeSystem.bypassMethods.cooldownBypass then
+                if buttonText:find("cooldown") or buttonText:find("wait") or buttonText:find("timer") then
+                    continue
+                end
+            end
+            
+            -- Attempt to click the button
+            if clickUpgradeButton(buttonData) then
+                upgradesPerformed = upgradesPerformed + 1
+                wait(AutoUpgradeSystem.upgradeDelay)
             end
         end
     end
+    
+    -- Process building pads (touch to upgrade)
+    for _, padData in ipairs(elements.buildingPads) do
+        if upgradesPerformed >= maxUpgrades then break end
+        
+        local pad = padData.element
+        if pad and pad.Parent and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            -- Check if pad is close enough
+            local distance = (player.Character.HumanoidRootPart.Position - pad.Position).Magnitude
+            if distance < 100 then
+                -- Touch the pad
+                firetouchinterest(player.Character.HumanoidRootPart, pad, 0)
+                firetouchinterest(player.Character.HumanoidRootPart, pad, 1)
+                
+                print("🏗️ Touched building pad: " .. pad.Name)
+                upgradesPerformed = upgradesPerformed + 1
+                wait(AutoUpgradeSystem.upgradeDelay)
+            end
+        end
+    end
+    
+    if upgradesPerformed > 0 then
+        print(string.format("⚡ Performed %d upgrades this cycle", upgradesPerformed))
+    end
 end
 
--- Enhanced ESP with Mobile Optimization
-local function createESP(target, espType)
-    if not target or not target:FindFirstChild("HumanoidRootPart") then return end
+-- Auto Upgrade Main Loop
+local function startAutoUpgrade()
+    if AutoUpgradeSystem.connections.mainLoop then
+        AutoUpgradeSystem.connections.mainLoop:Disconnect()
+    end
     
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "ESP"
-    billboard.Adornee = target.HumanoidRootPart
-    billboard.Size = UDim2.new(0, isMobile and 80 or 100, 0, isMobile and 40 or 50)
-    billboard.StudsOffset = Vector3.new(0, 3, 0)
-    billboard.Parent = target.HumanoidRootPart
-    
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 1, 0)
-    frame.BackgroundTransparency = 0.5
-    frame.BackgroundColor3 = espType == "enemy" and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 255, 0)
-    frame.BorderSizePixel = 2
-    frame.BorderColor3 = Color3.fromRGB(255, 255, 255)
-    frame.Parent = billboard
-    
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 4)
-    corner.Parent = frame
-    
-    local nameLabel = Instance.new("TextLabel")
-    nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.Text = target.Name
-    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    nameLabel.TextSize = isMobile and 10 or 12
-    nameLabel.Font = Enum.Font.GothamBold
-    nameLabel.TextScaled = true
-    nameLabel.Parent = frame
-    
-    local distanceLabel = Instance.new("TextLabel")
-    distanceLabel.Size = UDim2.new(1, 0, 0.5, 0)
-    distanceLabel.Position = UDim2.new(0, 0, 0.5, 0)
-    distanceLabel.BackgroundTransparency = 1
-    distanceLabel.Text = "0 studs"
-    distanceLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
-    distanceLabel.TextSize = isMobile and 8 or 10
-    distanceLabel.Font = Enum.Font.Gotham
-    distanceLabel.TextScaled = true
-    distanceLabel.Parent = frame
-    
-    -- Update distance
-    spawn(function()
-        while billboard.Parent and player.Character and player.Character:FindFirstChild("HumanoidRootPart") do
-            local distance = (player.Character.HumanoidRootPart.Position - target.HumanoidRootPart.Position).Magnitude
-            distanceLabel.Text = math.floor(distance) .. " studs"
-            wait(0.1)
+    AutoUpgradeSystem.connections.mainLoop = RunService.Heartbeat:Connect(function()
+        if AutoUpgradeSystem.enabled then
+            spawn(performSmartUpgrade)
         end
     end)
-end
-
--- Enhanced ESP Toggle
-local function toggleESP(enabled)
-    if enabled then
-        local gameElements = detectGameElements()
-        
-        -- ESP for enemies
-        for _, enemy in pairs(gameElements.enemies) do
-            createESP(enemy, "enemy")
-        end
-        
-        -- ESP for hovercrafts
-        for _, hovercraft in pairs(gameElements.hovercrafts) do
-            createESP(hovercraft, "vehicle")
-        end
-    else
-        -- Remove all ESP
-        for _, obj in pairs(Workspace:GetDescendants()) do
-            if obj.Name == "ESP" and obj:IsA("BillboardGui") then
-                obj:Destroy()
-            end
-        end
-    end
-end
-
--- Enhanced Auto Farm
-local function autoFarm()
-    if not HovercraftHack.features.autoFarm then return end
     
-    -- Combine multiple farming methods
-    autoCollectMoney()
-    autoUpgrade()
-    
-    -- Auto capture nearby points
-    local gameElements = detectGameElements()
-    for _, point in pairs(gameElements.capturePoints) do
-        if point and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local distance = (player.Character.HumanoidRootPart.Position - point.Position).Magnitude
-            if distance < 200 then
-                player.Character.HumanoidRootPart.CFrame = point.CFrame
-                wait(1)
-                break
-            end
-        end
-    end
+    print("🚀 Auto Upgrade system started!")
+    createNotification("🚀 Auto Upgrade Started!\nDynamic scanning enabled", Color3.fromRGB(100, 255, 100), 3)
 end
 
--- Create Mobile-Optimized GUI
-local function createGUI()
+local function stopAutoUpgrade()
+    if AutoUpgradeSystem.connections.mainLoop then
+        AutoUpgradeSystem.connections.mainLoop:Disconnect()
+        AutoUpgradeSystem.connections.mainLoop = nil
+    end
+    
+    print("⏹️ Auto Upgrade system stopped!")
+    createNotification("⏹️ Auto Upgrade Stopped", Color3.fromRGB(255, 100, 100), 2)
+end
+
+-- Configuration GUI
+local function createConfigGUI()
     local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "HovercraftBypassGUI"
+    screenGui.Name = "AutoUpgradeConfig"
     screenGui.ResetOnSpawn = false
     screenGui.Parent = playerGui
     
-    -- Adjust size for mobile
-    local guiSize = isMobile and UDim2.new(0, 350, 0, 500) or UDim2.new(0, 450, 0, 600)
-    local guiPosition = isMobile and UDim2.new(0, 10, 0, 10) or UDim2.new(0, 50, 0, 50)
-    
-    -- Main Frame
     local mainFrame = Instance.new("Frame")
-    mainFrame.Name = "MainFrame"
-    mainFrame.Size = guiSize
-    mainFrame.Position = guiPosition
+    mainFrame.Size = UDim2.new(0, 400, 0, 500)
+    mainFrame.Position = UDim2.new(0.5, -200, 0.5, -250)
     mainFrame.BackgroundColor3 = Color3.fromRGB(25, 30, 40)
     mainFrame.BorderSizePixel = 0
     mainFrame.Active = true
-    mainFrame.Draggable = not isMobile -- Disable drag on mobile
+    mainFrame.Draggable = true
     mainFrame.Parent = screenGui
     
-    local mainCorner = Instance.new("UICorner")
-    mainCorner.CornerRadius = UDim.new(0, 15)
-    mainCorner.Parent = mainFrame
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 15)
+    corner.Parent = mainFrame
     
-    local mainStroke = Instance.new("UIStroke")
-    mainStroke.Color = Color3.fromRGB(70, 130, 255)
-    mainStroke.Thickness = 2
-    mainStroke.Transparency = 0.4
-    mainStroke.Parent = mainFrame
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(70, 130, 255)
+    stroke.Thickness = 2
+    stroke.Transparency = 0.4
+    stroke.Parent = mainFrame
     
-    -- Title Bar
-    local titleBar = Instance.new("Frame")
-    titleBar.Size = UDim2.new(1, 0, 0, isMobile and 35 or 40)
-    titleBar.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
-    titleBar.BorderSizePixel = 0
-    titleBar.Parent = mainFrame
+    -- Title
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, -20, 0, 40)
+    title.Position = UDim2.new(0, 10, 0, 10)
+    title.BackgroundTransparency = 1
+    title.Text = "⚡ Dynamic Auto Upgrade System"
+    title.TextColor3 = Color3.fromRGB(100, 200, 255)
+    title.TextSize = 18
+    title.Font = Enum.Font.GothamBold
+    title.Parent = mainFrame
     
-    local titleCorner = Instance.new("UICorner")
-    titleCorner.CornerRadius = UDim.new(0, 15)
-    titleCorner.Parent = titleBar
+    -- Main toggle
+    local toggleFrame = Instance.new("Frame")
+    toggleFrame.Size = UDim2.new(1, -20, 0, 60)
+    toggleFrame.Position = UDim2.new(0, 10, 0, 60)
+    toggleFrame.BackgroundColor3 = Color3.fromRGB(40, 45, 55)
+    toggleFrame.BorderSizePixel = 0
+    toggleFrame.Parent = mainFrame
     
-    local titleExt = Instance.new("Frame")
-    titleExt.Size = UDim2.new(1, 0, 0, 15)
-    titleExt.Position = UDim2.new(0, 0, 1, -15)
-    titleExt.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
-    titleExt.BorderSizePixel = 0
-    titleExt.Parent = titleBar
+    local toggleCorner = Instance.new("UICorner")
+    toggleCorner.CornerRadius = UDim.new(0, 8)
+    toggleCorner.Parent = toggleFrame
     
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, -80, 1, 0)
-    titleLabel.Position = UDim2.new(0, 15, 0, 0)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = "🚁 Hovercraft Bypass " .. (isMobile and "📱" or "💻")
-    titleLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
-    titleLabel.TextSize = isMobile and 12 or 14
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    titleLabel.TextScaled = isMobile
-    titleLabel.Parent = titleBar
+    local toggleLabel = Instance.new("TextLabel")
+    toggleLabel.Size = UDim2.new(0, 250, 1, 0)
+    toggleLabel.Position = UDim2.new(0, 15, 0, 0)
+    toggleLabel.BackgroundTransparency = 1
+    toggleLabel.Text = "🚀 Auto Upgrade (Dynamic)\nUpgrade base tanpa money"
+    toggleLabel.TextColor3 = Color3.fromRGB(200, 220, 255)
+    toggleLabel.TextSize = 14
+    toggleLabel.Font = Enum.Font.GothamBold
+    toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    toggleLabel.Parent = toggleFrame
     
-    -- Close Button
+    local toggleBtn = Instance.new("TextButton")
+    toggleBtn.Size = UDim2.new(0, 80, 0, 35)
+    toggleBtn.Position = UDim2.new(1, -90, 0, 12)
+    toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 70, 80)
+    toggleBtn.Text = "OFF"
+    toggleBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+    toggleBtn.TextSize = 14
+    toggleBtn.Font = Enum.Font.GothamBold
+    toggleBtn.BorderSizePixel = 0
+    toggleBtn.Parent = toggleFrame
+    
+    local toggleBtnCorner = Instance.new("UICorner")
+    toggleBtnCorner.CornerRadius = UDim.new(0, 6)
+    toggleBtnCorner.Parent = toggleBtn
+    
+    -- Settings
+    local settingsFrame = Instance.new("ScrollingFrame")
+    settingsFrame.Size = UDim2.new(1, -20, 1, -140)
+    settingsFrame.Position = UDim2.new(0, 10, 0, 130)
+    settingsFrame.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
+    settingsFrame.BorderSizePixel = 0
+    settingsFrame.ScrollBarThickness = 6
+    settingsFrame.ScrollBarImageColor3 = Color3.fromRGB(70, 130, 255)
+    settingsFrame.CanvasSize = UDim2.new(0, 0, 0, 600)
+    settingsFrame.Parent = mainFrame
+    
+    local settingsCorner = Instance.new("UICorner")
+    settingsCorner.CornerRadius = UDim.new(0, 8)
+    settingsCorner.Parent = settingsFrame
+    
+    local layout = Instance.new("UIListLayout")
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Padding = UDim.new(0, 10)
+    layout.Parent = settingsFrame
+    
+    -- Create setting toggles
+    local function createSettingToggle(name, description, setting, layoutOrder)
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(1, -20, 0, 50)
+        frame.BackgroundColor3 = Color3.fromRGB(40, 45, 55)
+        frame.BorderSizePixel = 0
+        frame.LayoutOrder = layoutOrder
+        frame.Parent = settingsFrame
+        
+        local frameCorner = Instance.new("UICorner")
+        frameCorner.CornerRadius = UDim.new(0, 6)
+        frameCorner.Parent = frame
+        
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(0, 200, 1, 0)
+        label.Position = UDim2.new(0, 10, 0, 0)
+        label.BackgroundTransparency = 1
+        label.Text = name .. "\n" .. description
+        label.TextColor3 = Color3.fromRGB(200, 220, 255)
+        label.TextSize = 11
+        label.Font = Enum.Font.Gotham
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.Parent = frame
+        
+        local toggle = Instance.new("TextButton")
+        toggle.Size = UDim2.new(0, 60, 0, 25)
+        toggle.Position = UDim2.new(1, -70, 0, 12)
+        toggle.BackgroundColor3 = AutoUpgradeSystem.bypassMethods[setting] and Color3.fromRGB(50, 120, 50) or Color3.fromRGB(60, 70, 80)
+        toggle.Text = AutoUpgradeSystem.bypassMethods[setting] and "ON" or "OFF"
+        toggle.TextColor3 = AutoUpgradeSystem.bypassMethods[setting] and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+        toggle.TextSize = 10
+        toggle.Font = Enum.Font.GothamBold
+        toggle.BorderSizePixel = 0
+        toggle.Parent = frame
+        
+        local toggleCorner = Instance.new("UICorner")
+        toggleCorner.CornerRadius = UDim.new(0, 4)
+        toggleCorner.Parent = toggle
+        
+        toggle.MouseButton1Click:Connect(function()
+            AutoUpgradeSystem.bypassMethods[setting] = not AutoUpgradeSystem.bypassMethods[setting]
+            toggle.BackgroundColor3 = AutoUpgradeSystem.bypassMethods[setting] and Color3.fromRGB(50, 120, 50) or Color3.fromRGB(60, 70, 80)
+            toggle.Text = AutoUpgradeSystem.bypassMethods[setting] and "ON" or "OFF"
+            toggle.TextColor3 = AutoUpgradeSystem.bypassMethods[setting] and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+        end)
+    end
+    
+    createSettingToggle("💰 Money Bypass", "Bypass money requirements", "moneyBypass", 1)
+    createSettingToggle("📋 Requirement Bypass", "Bypass level/unlock requirements", "requirementBypass", 2)
+    createSettingToggle("⏰ Cooldown Bypass", "Bypass upgrade cooldowns", "cooldownBypass", 3)
+    createSettingToggle("🎯 Level Bypass", "Bypass level restrictions", "levelBypass", 4)
+    
+    -- Statistics
+    local statsFrame = Instance.new("Frame")
+    statsFrame.Size = UDim2.new(1, -20, 0, 100)
+    statsFrame.BackgroundColor3 = Color3.fromRGB(40, 45, 55)
+    statsFrame.BorderSizePixel = 0
+    statsFrame.LayoutOrder = 5
+    statsFrame.Parent = settingsFrame
+    
+    local statsCorner = Instance.new("UICorner")
+    statsCorner.CornerRadius = UDim.new(0, 6)
+    statsCorner.Parent = statsFrame
+    
+    local statsLabel = Instance.new("TextLabel")
+    statsLabel.Size = UDim2.new(1, -20, 1, 0)
+    statsLabel.Position = UDim2.new(0, 10, 0, 0)
+    statsLabel.BackgroundTransparency = 1
+    statsLabel.Text = "📊 Statistics\nButtons: 0 | Pads: 0 | Remotes: 0\nLast Scan: Never"
+    statsLabel.TextColor3 = Color3.fromRGB(150, 170, 190)
+    statsLabel.TextSize = 12
+    statsLabel.Font = Enum.Font.Gotham
+    statsLabel.TextXAlignment = Enum.TextXAlignment.Left
+    statsLabel.Parent = statsFrame
+    
+    -- Update stats
+    local function updateStats()
+        local elements = AutoUpgradeSystem.detectedElements
+        local buttonCount = #elements.upgradeButtons
+        local padCount = #elements.buildingPads
+        local remoteCount = #elements.remoteEvents
+        local lastScan = AutoUpgradeSystem.lastScanTime > 0 and os.date("%H:%M:%S", AutoUpgradeSystem.lastScanTime) or "Never"
+        
+        statsLabel.Text = string.format("📊 Statistics\nButtons: %d | Pads: %d | Remotes: %d\nLast Scan: %s", 
+                                       buttonCount, padCount, remoteCount, lastScan)
+    end
+    
+    -- Main toggle functionality
+    toggleBtn.MouseButton1Click:Connect(function()
+        AutoUpgradeSystem.enabled = not AutoUpgradeSystem.enabled
+        
+        if AutoUpgradeSystem.enabled then
+            toggleBtn.Text = "ON"
+            toggleBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
+            toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 120, 50)
+            startAutoUpgrade()
+        else
+            toggleBtn.Text = "OFF"
+            toggleBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+            toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 70, 80)
+            stopAutoUpgrade()
+        end
+    end)
+    
+    -- Update stats every 3 seconds
+    spawn(function()
+        while screenGui.Parent do
+            updateStats()
+            wait(3)
+        end
+    end)
+    
+    -- Close button
     local closeBtn = Instance.new("TextButton")
-    closeBtn.Size = UDim2.new(0, isMobile and 25 or 30, 0, isMobile and 20 or 25)
-    closeBtn.Position = UDim2.new(1, isMobile and -30 or -35, 0, isMobile and 5 or 7)
+    closeBtn.Size = UDim2.new(0, 30, 0, 25)
+    closeBtn.Position = UDim2.new(1, -40, 0, 10)
     closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
     closeBtn.Text = "×"
     closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    closeBtn.TextSize = isMobile and 14 or 16
+    closeBtn.TextSize = 16
     closeBtn.Font = Enum.Font.GothamBold
     closeBtn.BorderSizePixel = 0
-    closeBtn.Parent = titleBar
+    closeBtn.Parent = mainFrame
     
     local closeBtnCorner = Instance.new("UICorner")
     closeBtnCorner.CornerRadius = UDim.new(0, 3)
     closeBtnCorner.Parent = closeBtn
     
-    -- Minimize Button (Mobile only)
-    local minimizeBtn
-    if isMobile then
-        minimizeBtn = Instance.new("TextButton")
-        minimizeBtn.Size = UDim2.new(0, 25, 0, 20)
-        minimizeBtn.Position = UDim2.new(1, -60, 0, 5)
-        minimizeBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 50)
-        minimizeBtn.Text = "−"
-        minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        minimizeBtn.TextSize = 14
-        minimizeBtn.Font = Enum.Font.GothamBold
-        minimizeBtn.BorderSizePixel = 0
-        minimizeBtn.Parent = titleBar
-        
-        local minimizeBtnCorner = Instance.new("UICorner")
-        minimizeBtnCorner.CornerRadius = UDim.new(0, 3)
-        minimizeBtnCorner.Parent = minimizeBtn
-    end
-    
-    -- Scroll Frame
-    local scrollFrame = Instance.new("ScrollingFrame")
-    scrollFrame.Size = UDim2.new(1, -20, 1, -60)
-    scrollFrame.Position = UDim2.new(0, 10, 0, 50)
-    scrollFrame.BackgroundTransparency = 1
-    scrollFrame.BorderSizePixel = 0
-    scrollFrame.ScrollBarThickness = isMobile and 4 or 6
-    scrollFrame.ScrollBarImageColor3 = Color3.fromRGB(70, 130, 255)
-    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 1000)
-    scrollFrame.Parent = mainFrame
-    
-    local layout = Instance.new("UIListLayout")
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Padding = UDim.new(0, isMobile and 8 or 10)
-    layout.Parent = scrollFrame
-    
-    -- Mobile-optimized button creation
-    local function createToggleButton(name, description, callback, layoutOrder)
-        local buttonFrame = Instance.new("Frame")
-        buttonFrame.Size = UDim2.new(1, -20, 0, isMobile and 50 or 60)
-        buttonFrame.BackgroundColor3 = Color3.fromRGB(40, 45, 55)
-        buttonFrame.BorderSizePixel = 0
-        buttonFrame.LayoutOrder = layoutOrder or 1
-        buttonFrame.Parent = scrollFrame
-        
-        local buttonCorner = Instance.new("UICorner")
-        buttonCorner.CornerRadius = UDim.new(0, 8)
-        buttonCorner.Parent = buttonFrame
-        
-        local nameLabel = Instance.new("TextLabel")
-        nameLabel.Size = UDim2.new(0, isMobile and 180 or 250, 0, isMobile and 20 or 25)
-        nameLabel.Position = UDim2.new(0, 10, 0, 5)
-        nameLabel.BackgroundTransparency = 1
-        nameLabel.Text = name
-        nameLabel.TextColor3 = Color3.fromRGB(200, 220, 255)
-        nameLabel.TextSize = isMobile and 11 or 14
-        nameLabel.Font = Enum.Font.GothamBold
-        nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-        nameLabel.TextScaled = isMobile
-        nameLabel.Parent = buttonFrame
-        
-        local descLabel = Instance.new("TextLabel")
-        descLabel.Size = UDim2.new(0, isMobile and 180 or 250, 0, isMobile and 15 or 20)
-        descLabel.Position = UDim2.new(0, 10, 0, isMobile and 25 or 30)
-        descLabel.BackgroundTransparency = 1
-        descLabel.Text = description
-        descLabel.TextColor3 = Color3.fromRGB(150, 170, 190)
-        descLabel.TextSize = isMobile and 8 or 10
-        descLabel.Font = Enum.Font.Gotham
-        descLabel.TextXAlignment = Enum.TextXAlignment.Left
-        descLabel.TextScaled = isMobile
-        descLabel.Parent = buttonFrame
-        
-        local toggleBtn = Instance.new("TextButton")
-        toggleBtn.Size = UDim2.new(0, isMobile and 60 or 80, 0, isMobile and 25 or 30)
-        toggleBtn.Position = UDim2.new(1, isMobile and -70 or -90, 0, isMobile and 12 or 15)
-        toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 70, 80)
-        toggleBtn.Text = "OFF"
-        toggleBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-        toggleBtn.TextSize = isMobile and 10 or 12
-        toggleBtn.Font = Enum.Font.GothamBold
-        toggleBtn.BorderSizePixel = 0
-        toggleBtn.Parent = buttonFrame
-        
-        local toggleCorner = Instance.new("UICorner")
-        toggleCorner.CornerRadius = UDim.new(0, 6)
-        toggleCorner.Parent = toggleBtn
-        
-        local isEnabled = false
-        toggleBtn.MouseButton1Click:Connect(function()
-            isEnabled = not isEnabled
-            if isEnabled then
-                toggleBtn.Text = "ON"
-                toggleBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
-                toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 120, 50)
-            else
-                toggleBtn.Text = "OFF"
-                toggleBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-                toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 70, 80)
-            end
-            callback(isEnabled)
-        end)
-        
-        -- Touch support for mobile
-        if isMobile then
-            toggleBtn.TouchTap:Connect(function()
-                toggleBtn.MouseButton1Click:Fire()
-            end)
-        end
-        
-        return toggleBtn
-    end
-    
-    -- Create all feature buttons with mobile optimization
-    createToggleButton("💰 Auto Collect Money", "Otomatis kumpulkan uang", function(enabled)
-        HovercraftHack.features.autoCollectMoney = enabled
-        if enabled then
-            HovercraftHack.connections.autoMoneyConnection = RunService.Heartbeat:Connect(autoCollectMoney)
-            createNotification("💰 Auto Collect ON", Color3.fromRGB(100, 255, 100))
-        else
-            if HovercraftHack.connections.autoMoneyConnection then
-                HovercraftHack.connections.autoMoneyConnection:Disconnect()
-            end
-            createNotification("💰 Auto Collect OFF", Color3.fromRGB(255, 100, 100))
-        end
-    end, 1)
-    
-    createToggleButton("⬆️ Auto Upgrade", "Otomatis upgrade building", function(enabled)
-        HovercraftHack.features.autoUpgrade = enabled
-        if enabled then
-            HovercraftHack.connections.autoUpgradeConnection = RunService.Heartbeat:Connect(autoUpgrade)
-            createNotification("⬆️ Auto Upgrade ON", Color3.fromRGB(100, 255, 100))
-        else
-            if HovercraftHack.connections.autoUpgradeConnection then
-                HovercraftHack.connections.autoUpgradeConnection:Disconnect()
-            end
-            createNotification("⬆️ Auto Upgrade OFF", Color3.fromRGB(255, 100, 100))
-        end
-    end, 2)
-    
-    createToggleButton("💎 Infinite Money", "Uang tidak terbatas", function(enabled)
-        HovercraftHack.features.infiniteMoney = enabled
-        if enabled then
-            HovercraftHack.connections.infiniteMoneyConnection = RunService.Heartbeat:Connect(infiniteMoney)
-            createNotification("💎 Infinite Money ON", Color3.fromRGB(255, 215, 0))
-        else
-            if HovercraftHack.connections.infiniteMoneyConnection then
-                HovercraftHack.connections.infiniteMoneyConnection:Disconnect()
-            end
-            createNotification("💎 Infinite Money OFF", Color3.fromRGB(255, 100, 100))
-        end
-    end, 3)
-    
-    createToggleButton("⚡ Speed Hack", "Kecepatan super cepat", function(enabled)
-        HovercraftHack.features.speedHack = enabled
-        speedHack(enabled, 100)
-        createNotification(enabled and "⚡ Speed Hack ON" or "⚡ Speed Hack OFF", 
-                          enabled and Color3.fromRGB(255, 255, 100) or Color3.fromRGB(255, 100, 100))
-    end, 4)
-    
-    createToggleButton("🦘 Jump Hack", "Lompatan tinggi", function(enabled)
-        jumpHack(enabled, 150)
-        createNotification(enabled and "🦘 Jump Hack ON" or "🦘 Jump Hack OFF", 
-                          enabled and Color3.fromRGB(150, 255, 150) or Color3.fromRGB(255, 100, 100))
-    end, 5)
-    
-    createToggleButton("🚀 Fly Hack", "Terbang bebas", function(enabled)
-        HovercraftHack.features.flyHack = enabled
-        flyHack(enabled)
-        createNotification(enabled and "🚀 Fly Hack ON" or "🚀 Fly Hack OFF", 
-                          enabled and Color3.fromRGB(100, 200, 255) or Color3.fromRGB(255, 100, 100))
-    end, 6)
-    
-    createToggleButton("👻 NoClip", "Tembus dinding", function(enabled)
-        HovercraftHack.features.noclip = enabled
-        noclip(enabled)
-        createNotification(enabled and "👻 NoClip ON" or "👻 NoClip OFF", 
-                          enabled and Color3.fromRGB(200, 100, 255) or Color3.fromRGB(255, 100, 100))
-    end, 7)
-    
-    createToggleButton("👁️ ESP", "Lihat musuh melalui dinding", function(enabled)
-        HovercraftHack.features.esp = enabled
-        toggleESP(enabled)
-        createNotification(enabled and "👁️ ESP ON" or "👁️ ESP OFF", 
-                          enabled and Color3.fromRGB(255, 150, 100) or Color3.fromRGB(255, 100, 100))
-    end, 8)
-    
-    createToggleButton("🤖 Auto Farm", "Farming otomatis lengkap", function(enabled)
-        HovercraftHack.features.autoFarm = enabled
-        if enabled then
-            HovercraftHack.connections.autoFarmConnection = RunService.Heartbeat:Connect(autoFarm)
-            createNotification("🤖 Auto Farm ON", Color3.fromRGB(100, 255, 200))
-        else
-            if HovercraftHack.connections.autoFarmConnection then
-                HovercraftHack.connections.autoFarmConnection:Disconnect()
-            end
-            createNotification("🤖 Auto Farm OFF", Color3.fromRGB(255, 100, 100))
-        end
-    end, 9)
-    
-    -- Close button functionality
     closeBtn.MouseButton1Click:Connect(function()
         screenGui:Destroy()
     end)
     
-    -- Mobile close support
-    if isMobile then
-        closeBtn.TouchTap:Connect(function()
-            screenGui:Destroy()
-        end)
-        
-        -- Minimize functionality for mobile
-        if minimizeBtn then
-            local isMinimized = false
-            minimizeBtn.MouseButton1Click:Connect(function()
-                isMinimized = not isMinimized
-                if isMinimized then
-                    mainFrame.Size = UDim2.new(0, 350, 0, 35)
-                    scrollFrame.Visible = false
-                    minimizeBtn.Text = "+"
-                else
-                    mainFrame.Size = UDim2.new(0, 350, 0, 500)
-                    scrollFrame.Visible = true
-                    minimizeBtn.Text = "−"
-                end
-            end)
-            
-            minimizeBtn.TouchTap:Connect(function()
-                minimizeBtn.MouseButton1Click:Fire()
-            end)
-        end
-    end
-    
-    HovercraftHack.gui = screenGui
     return screenGui
 end
 
--- Initialize System
+-- Initialize system
 local function initialize()
-    -- Setup bypass first
-    setupBypass()
+    print("🚀 Initializing Dynamic Auto Upgrade System...")
     
-    createNotification("🛡️ Bypass system loaded!", Color3.fromRGB(100, 255, 100), 2)
-    wait(0.5)
-    createNotification("🚁 Hovercraft Hack " .. (isMobile and "Mobile" or "PC") .. " loaded!", Color3.fromRGB(100, 200, 255), 3)
+    -- Initial scan
+    scanForUpgradeElements()
     
     -- Create GUI
-    createGUI()
+    createConfigGUI()
     
-    -- Detect game elements
-    detectGameElements()
+    createNotification("⚡ Dynamic Auto Upgrade System Loaded!\nNo static data - Full dynamic detection", Color3.fromRGB(100, 200, 255), 4)
     
-    print("🚁 Hovercrafts War Tycoon Mobile Bypass Script loaded!")
-    print("📱 Platform: " .. (isMobile and "Mobile" or "PC"))
-    print("🛡️ Bypass: Active")
-    print("📋 Features available:")
-    print("   • Auto Collect Money (Bypass)")
-    print("   • Auto Upgrade (Smart)")
-    print("   • Infinite Money (Multi-method)")
-    print("   • Speed Hack (Bypass)")
-    print("   • Jump Hack (Enhanced)")
-    print("   • Fly Hack (Mobile support)")
-    print("   • NoClip (Bypass)")
-    print("   • ESP (Mobile optimized)")
-    print("   • Auto Farm (Complete)")
-    print("⚡ Ready to use!")
+    print("✅ Dynamic Auto Upgrade System ready!")
+    print("📋 Features:")
+    print("   • Dynamic element detection")
+    print("   • Money bypass system")
+    print("   • Smart upgrade logic")
+    print("   • Mobile support")
+    print("   • No static data used")
+    print("   • Real-time scanning")
 end
 
--- Keyboard shortcuts (PC only)
-if isPC then
-    UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if gameProcessed then return end
-        
-        if input.KeyCode == Enum.KeyCode.Insert then
-            if HovercraftHack.gui then
-                HovercraftHack.gui.MainFrame.Visible = not HovercraftHack.gui.MainFrame.Visible
-            end
-        elseif input.KeyCode == Enum.KeyCode.Delete then
-            -- Emergency disable all features
-            for featureName, _ in pairs(HovercraftHack.features) do
-                HovercraftHack.features[featureName] = false
-            end
-            for _, connection in pairs(HovercraftHack.connections) do
-                if connection then connection:Disconnect() end
-            end
-            createNotification("🚨 Emergency stop activated!", Color3.fromRGB(255, 100, 100))
-        end
-    end)
-end
-
--- Mobile gesture support
-if isMobile then
-    local touchStartPos = nil
-    local touchStartTime = 0
+-- Keyboard shortcut
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
     
-    UserInputService.TouchStarted:Connect(function(touch, gameProcessed)
-        if gameProcessed then return end
-        touchStartPos = touch.Position
-        touchStartTime = tick()
-    end)
-    
-    UserInputService.TouchEnded:Connect(function(touch, gameProcessed)
-        if gameProcessed or not touchStartPos then return end
-        
-        local touchEndPos = touch.Position
-        local touchDuration = tick() - touchStartTime
-        local touchDistance = (touchEndPos - touchStartPos).Magnitude
-        
-        -- Three finger tap to toggle GUI
-        if touchDuration < 0.5 and touchDistance < 50 then
-            local touches = UserInputService:GetTouchesInProgress()
-            if #touches >= 3 then
-                if HovercraftHack.gui then
-                    HovercraftHack.gui.MainFrame.Visible = not HovercraftHack.gui.MainFrame.Visible
-                end
-            end
+    if input.KeyCode == Enum.KeyCode.F1 then
+        if playerGui:FindFirstChild("AutoUpgradeConfig") then
+            playerGui.AutoUpgradeConfig:Destroy()
+        else
+            createConfigGUI()
         end
-    end)
-end
+    end
+end)
 
 -- Auto-reconnect on character respawn
 player.CharacterAdded:Connect(function()
-    wait(2) -- Wait for character to fully load
-    
-    -- Reapply active features
-    if HovercraftHack.features.speedHack then
-        speedHack(true, 100)
-    end
-    if HovercraftHack.features.flyHack then
-        flyHack(true)
-    end
-    if HovercraftHack.features.noclip then
-        noclip(true)
-    end
-    
-    createNotification("🔄 Features reapplied after respawn", Color3.fromRGB(100, 200, 255))
+    wait(3) -- Wait for character to fully load
+    scanForUpgradeElements() -- Rescan elements
+    createNotification("🔄 Auto Upgrade system reconnected", Color3.fromRGB(100, 200, 255), 2)
 end)
 
--- Initialize the script
+-- Initialize
 initialize()

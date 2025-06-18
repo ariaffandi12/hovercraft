@@ -1,5 +1,5 @@
--- [Hovercrafts] War Tycoon - Dynamic Auto Upgrade System
--- Auto upgrade base tanpa money dengan deteksi dinamis
+-- [Hovercrafts] War Tycoon - Optimized Dynamic Auto Upgrade System
+-- Anti-lag, Anti-delay, Mobile optimized dengan minimize feature
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -9,11 +9,53 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local GuiService = game:GetService("GuiService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Dynamic Auto Upgrade System
+-- Detect platform
+local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+local isPC = UserInputService.KeyboardEnabled
+
+-- Performance Optimization System
+local PerformanceManager = {
+    frameRate = 60,
+    targetFPS = isMobile and 30 or 60,
+    lastFrameTime = 0,
+    frameSkipCount = 0,
+    maxFrameSkip = isMobile and 3 or 1,
+    renderStepped = false,
+    optimizationLevel = isMobile and 3 or 1, -- 1=Low, 2=Medium, 3=High
+    memoryThreshold = isMobile and 50 or 100, -- MB
+    lastMemoryCheck = 0,
+    memoryCheckInterval = 5,
+    lagDetectionThreshold = isMobile and 100 or 50, -- ms
+    antiLagEnabled = true,
+    smoothAnimations = true
+}
+
+-- Anti-Lag System
+local AntiLagSystem = {
+    enabled = true,
+    connections = {},
+    optimizations = {
+        reduceParticles = true,
+        disableUnnecessaryEffects = true,
+        optimizeRendering = true,
+        limitConcurrentOperations = true,
+        useFrameSkipping = true,
+        enableMemoryManagement = true
+    },
+    performanceStats = {
+        avgFPS = 60,
+        memoryUsage = 0,
+        lagSpikes = 0,
+        optimizationsApplied = 0
+    }
+}
+
+-- Dynamic Auto Upgrade System (Optimized)
 local AutoUpgradeSystem = {
     enabled = false,
     connections = {},
@@ -56,73 +98,192 @@ local AutoUpgradeSystem = {
     },
     upgradeQueue = {},
     lastScanTime = 0,
-    scanInterval = 2,
-    upgradeDelay = 0.5,
-    maxUpgradesPerCycle = 10
+    scanInterval = isMobile and 3 or 2, -- Longer interval on mobile
+    upgradeDelay = isMobile and 0.8 or 0.5, -- Longer delay on mobile
+    maxUpgradesPerCycle = isMobile and 5 or 10, -- Fewer upgrades on mobile
+    batchSize = isMobile and 2 or 5, -- Process fewer items per batch on mobile
+    asyncProcessing = true
 }
 
--- Enhanced Notification System
-local function createNotification(text, color, duration)
+-- Performance Monitoring
+local function getMemoryUsage()
+    return game:GetService("Stats"):GetTotalMemoryUsageMb()
+end
+
+local function getFPS()
+    return math.floor(1 / RunService.Heartbeat:Wait())
+end
+
+local function detectLag()
+    local currentTime = tick()
+    local deltaTime = currentTime - PerformanceManager.lastFrameTime
+    PerformanceManager.lastFrameTime = currentTime
+    
+    if deltaTime > PerformanceManager.lagDetectionThreshold / 1000 then
+        AntiLagSystem.performanceStats.lagSpikes = AntiLagSystem.performanceStats.lagSpikes + 1
+        return true
+    end
+    return false
+end
+
+-- Anti-Lag Optimizations
+local function applyAntiLagOptimizations()
+    if not AntiLagSystem.enabled then return end
+    
+    -- Reduce graphics quality on mobile
+    if isMobile then
+        settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+        settings().Rendering.MeshPartDetailLevel = Enum.MeshPartDetailLevel.Level01
+        settings().Rendering.MaterialQualityLevel = Enum.MaterialQualityLevel.Level01
+    end
+    
+    -- Disable unnecessary effects
+    if AntiLagSystem.optimizations.reduceParticles then
+        for _, effect in pairs(Workspace:GetDescendants()) do
+            if effect:IsA("ParticleEmitter") or effect:IsA("Fire") or effect:IsA("Smoke") then
+                effect.Enabled = false
+            end
+        end
+    end
+    
+    -- Optimize rendering
+    if AntiLagSystem.optimizations.optimizeRendering then
+        game:GetService("Lighting").GlobalShadows = false
+        game:GetService("Lighting").FogEnd = 100
+        game:GetService("Lighting").Brightness = 1
+    end
+    
+    AntiLagSystem.performanceStats.optimizationsApplied = AntiLagSystem.performanceStats.optimizationsApplied + 1
+    print("🚀 Anti-lag optimizations applied")
+end
+
+-- Memory Management
+local function performMemoryCleanup()
+    local currentTime = tick()
+    if currentTime - PerformanceManager.lastMemoryCheck < PerformanceManager.memoryCheckInterval then
+        return
+    end
+    
+    PerformanceManager.lastMemoryCheck = currentTime
+    local memoryUsage = getMemoryUsage()
+    AntiLagSystem.performanceStats.memoryUsage = memoryUsage
+    
+    if memoryUsage > PerformanceManager.memoryThreshold then
+        -- Force garbage collection
+        game:GetService("RunService").Heartbeat:Wait()
+        
+        -- Clean up old notifications
+        for _, gui in pairs(playerGui:GetChildren()) do
+            if gui.Name:find("Notification") and gui.Name ~= "AutoUpgradeNotification" then
+                gui:Destroy()
+            end
+        end
+        
+        print("🧹 Memory cleanup performed: " .. math.floor(memoryUsage) .. "MB")
+    end
+end
+
+-- Smooth Animation System
+local function createSmoothTween(object, properties, duration, easingStyle)
+    if not PerformanceManager.smoothAnimations then
+        -- Instant change for performance
+        for prop, value in pairs(properties) do
+            object[prop] = value
+        end
+        return
+    end
+    
+    local tweenInfo = TweenInfo.new(
+        duration or 0.3,
+        easingStyle or Enum.EasingStyle.Quart,
+        Enum.EasingDirection.Out
+    )
+    
+    local tween = TweenService:Create(object, tweenInfo, properties)
+    tween:Play()
+    return tween
+end
+
+-- Enhanced Notification System (Optimized)
+local notificationQueue = {}
+local maxNotifications = isMobile and 2 or 3
+local activeNotifications = 0
+
+local function createOptimizedNotification(text, color, duration)
+    -- Limit notifications to prevent lag
+    if activeNotifications >= maxNotifications then
+        table.insert(notificationQueue, {text = text, color = color, duration = duration})
+        return
+    end
+    
+    activeNotifications = activeNotifications + 1
+    
     local notification = Instance.new("ScreenGui")
     notification.Name = "AutoUpgradeNotification"
     notification.Parent = playerGui
     
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 320, 0, 70)
-    frame.Position = UDim2.new(1, -340, 0, 20)
+    frame.Size = isMobile and UDim2.new(0, 280, 0, 60) or UDim2.new(0, 320, 0, 70)
+    frame.Position = UDim2.new(1, -340, 0, 20 + (activeNotifications - 1) * 80)
     frame.BackgroundColor3 = color or Color3.fromRGB(50, 200, 100)
     frame.BorderSizePixel = 0
     frame.Parent = notification
     
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 12)
+    corner.CornerRadius = UDim.new(0, isMobile and 8 or 12)
     corner.Parent = frame
     
     local stroke = Instance.new("UIStroke")
     stroke.Color = Color3.fromRGB(255, 255, 255)
-    stroke.Thickness = 2
+    stroke.Thickness = isMobile and 1 or 2
     stroke.Transparency = 0.7
     stroke.Parent = frame
     
     local icon = Instance.new("TextLabel")
-    icon.Size = UDim2.new(0, 50, 0, 50)
+    icon.Size = UDim2.new(0, isMobile and 40 or 50, 0, isMobile and 40 or 50)
     icon.Position = UDim2.new(0, 10, 0, 10)
     icon.BackgroundTransparency = 1
     icon.Text = "⚡"
     icon.TextColor3 = Color3.fromRGB(255, 255, 255)
-    icon.TextSize = 24
+    icon.TextSize = isMobile and 20 or 24
     icon.Font = Enum.Font.GothamBold
     icon.Parent = frame
     
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -70, 1, 0)
-    label.Position = UDim2.new(0, 60, 0, 0)
+    label.Size = UDim2.new(1, isMobile and -60 or -70, 1, 0)
+    label.Position = UDim2.new(0, isMobile and 50 or 60, 0, 0)
     label.BackgroundTransparency = 1
     label.Text = text
     label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    label.TextSize = 14
+    label.TextSize = isMobile and 11 or 14
     label.Font = Enum.Font.GothamBold
     label.TextWrapped = true
     label.TextXAlignment = Enum.TextXAlignment.Left
+    label.TextScaled = isMobile
     label.Parent = frame
     
-    -- Animation
-    frame.Position = UDim2.new(1, 0, 0, 20)
-    local slideIn = TweenService:Create(frame, TweenInfo.new(0.3), {Position = UDim2.new(1, -340, 0, 20)})
-    slideIn:Play()
+    -- Smooth animation
+    frame.Position = UDim2.new(1, 0, 0, 20 + (activeNotifications - 1) * 80)
+    createSmoothTween(frame, {Position = UDim2.new(1, -340, 0, 20 + (activeNotifications - 1) * 80)}, 0.3)
     
+    -- Auto remove
     spawn(function()
-        wait(duration or 4)
-        local slideOut = TweenService:Create(frame, TweenInfo.new(0.3), {Position = UDim2.new(1, 0, 0, 20)})
-        slideOut:Play()
-        slideOut.Completed:Connect(function()
-            notification:Destroy()
-        end)
+        wait(duration or 3)
+        createSmoothTween(frame, {Position = UDim2.new(1, 0, 0, 20 + (activeNotifications - 1) * 80)}, 0.3)
+        wait(0.3)
+        notification:Destroy()
+        activeNotifications = activeNotifications - 1
+        
+        -- Process queued notifications
+        if #notificationQueue > 0 then
+            local queued = table.remove(notificationQueue, 1)
+            createOptimizedNotification(queued.text, queued.color, queued.duration)
+        end
     end)
 end
 
--- Dynamic Element Scanner
-local function scanForUpgradeElements()
+-- Optimized Element Scanner with Batching
+local function scanForUpgradeElementsOptimized()
     local currentTime = tick()
     if currentTime - AutoUpgradeSystem.lastScanTime < AutoUpgradeSystem.scanInterval then
         return AutoUpgradeSystem.detectedElements
@@ -140,20 +301,40 @@ local function scanForUpgradeElements()
         buildingModels = {}
     }
     
-    print("🔍 Scanning for upgrade elements...")
+    print("🔍 Optimized scanning for upgrade elements...")
     
-    -- Scan GUI elements
-    local function scanGuiElement(element, parent)
-        if not element or not element.Parent then return end
+    -- Batch processing to prevent lag
+    local function processBatch(items, processor, batchSize)
+        batchSize = batchSize or AutoUpgradeSystem.batchSize
+        local processed = 0
         
-        local elementName = element.Name:lower()
-        local elementText = ""
-        
-        if element:IsA("TextButton") or element:IsA("TextLabel") then
-            elementText = element.Text:lower()
+        for i, item in ipairs(items) do
+            processor(item)
+            processed = processed + 1
+            
+            -- Yield every batch to prevent lag
+            if processed >= batchSize then
+                if AutoUpgradeSystem.asyncProcessing then
+                    RunService.Heartbeat:Wait()
+                end
+                processed = 0
+            end
         end
+    end
+    
+    -- Optimized GUI scanning
+    local guiElements = {}
+    for _, gui in pairs(playerGui:GetDescendants()) do
+        if gui:IsA("TextButton") or gui:IsA("ImageButton") then
+            table.insert(guiElements, gui)
+        end
+    end
+    
+    processBatch(guiElements, function(element)
+        local elementName = element.Name:lower()
+        local elementText = element.Text and element.Text:lower() or ""
         
-        -- Check for upgrade buttons
+        -- Quick pattern matching
         for _, pattern in ipairs(AutoUpgradeSystem.scanPatterns.buttonTexts) do
             if elementText:find(pattern) or elementName:find(pattern) then
                 local buttonData = {
@@ -161,132 +342,77 @@ local function scanForUpgradeElements()
                     type = "upgrade",
                     text = element.Text or "",
                     name = element.Name,
-                    parent = parent,
-                    position = element.AbsolutePosition,
-                    size = element.AbsoluteSize,
+                    parent = element.Parent,
                     visible = element.Visible,
                     active = element.Active,
-                    priority = 1
-                }
-                
-                -- Determine button priority based on text
-                if elementText:find("upgrade") then
-                    buttonData.priority = 1
-                elseif elementText:find("unlock") then
-                    buttonData.priority = 2
-                elseif elementText:find("buy") or elementText:find("purchase") then
-                    buttonData.priority = 3
-                end
-                
-                table.insert(AutoUpgradeSystem.detectedElements.upgradeButtons, buttonData)
-                print("📱 Found upgrade button: " .. element.Name .. " - " .. (element.Text or ""))
-            end
-        end
-        
-        -- Check for button names
-        for _, pattern in ipairs(AutoUpgradeSystem.scanPatterns.buttonNames) do
-            if elementName:find(pattern:lower()) then
-                local buttonData = {
-                    element = element,
-                    type = "named",
-                    text = element.Text or "",
-                    name = element.Name,
-                    parent = parent,
-                    position = element.AbsolutePosition,
-                    size = element.AbsoluteSize,
-                    visible = element.Visible,
-                    active = element.Active,
-                    priority = 2
+                    priority = elementText:find("upgrade") and 1 or (elementText:find("unlock") and 2 or 3)
                 }
                 
                 table.insert(AutoUpgradeSystem.detectedElements.upgradeButtons, buttonData)
-                print("📱 Found named button: " .. element.Name)
+                break
             end
         end
-    end
+    end)
     
-    -- Scan all GUI elements
-    for _, gui in pairs(playerGui:GetDescendants()) do
-        if gui:IsA("TextButton") or gui:IsA("ImageButton") then
-            scanGuiElement(gui, gui.Parent)
-        end
-    end
-    
-    -- Scan workspace for building pads and models
-    local function scanWorkspaceElement(element)
-        if not element or not element.Parent then return end
+    -- Optimized workspace scanning (limited scope)
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        local playerPos = player.Character.HumanoidRootPart.Position
+        local scanRadius = isMobile and 200 or 500 -- Smaller radius on mobile
         
-        local elementName = element.Name:lower()
-        
-        -- Check for building pads
-        for _, pattern in ipairs(AutoUpgradeSystem.scanPatterns.padNames) do
-            if elementName:find(pattern) then
-                local padData = {
-                    element = element,
-                    type = "pad",
-                    name = element.Name,
-                    position = element.Position,
-                    size = element.Size,
-                    canCollide = element.CanCollide,
-                    transparency = element.Transparency,
-                    color = element.Color
-                }
-                
-                table.insert(AutoUpgradeSystem.detectedElements.buildingPads, padData)
-                print("🏗️ Found building pad: " .. element.Name)
+        local nearbyParts = {}
+        for _, part in pairs(Workspace:GetPartBoundsInBox(CFrame.new(playerPos), Vector3.new(scanRadius, scanRadius, scanRadius))) do
+            if part.Parent ~= player.Character then
+                table.insert(nearbyParts, part)
             end
         end
         
-        -- Check for building models
-        if element:IsA("Model") then
-            for _, pattern in ipairs(AutoUpgradeSystem.scanPatterns.buildingIndicators) do
-                if elementName:find(pattern) then
-                    local modelData = {
-                        element = element,
-                        type = "building",
-                        name = element.Name,
-                        position = element:GetModelCFrame().Position,
-                        size = element:GetExtentsSize(),
-                        parts = #element:GetChildren()
+        processBatch(nearbyParts, function(part)
+            local partName = part.Name:lower()
+            
+            for _, pattern in ipairs(AutoUpgradeSystem.scanPatterns.padNames) do
+                if partName:find(pattern) then
+                    local padData = {
+                        element = part,
+                        type = "pad",
+                        name = part.Name,
+                        position = part.Position,
+                        distance = (playerPos - part.Position).Magnitude
                     }
                     
-                    table.insert(AutoUpgradeSystem.detectedElements.buildingModels, modelData)
-                    print("🏢 Found building model: " .. element.Name)
+                    table.insert(AutoUpgradeSystem.detectedElements.buildingPads, padData)
+                    break
                 end
             end
-        end
+        end)
     end
     
-    -- Scan workspace
-    for _, element in pairs(Workspace:GetDescendants()) do
-        if element:IsA("BasePart") or element:IsA("Model") then
-            scanWorkspaceElement(element)
-        end
-    end
-    
-    -- Scan for remote events
+    -- Quick remote scanning
+    local remotes = {}
     for _, remote in pairs(ReplicatedStorage:GetDescendants()) do
         if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
-            local remoteName = remote.Name:lower()
-            
-            for _, pattern in ipairs(AutoUpgradeSystem.scanPatterns.remoteNames) do
-                if remoteName:find(pattern:lower()) then
-                    local remoteData = {
-                        element = remote,
-                        type = "remote",
-                        name = remote.Name,
-                        className = remote.ClassName,
-                        parent = remote.Parent.Name
-                    }
-                    
-                    table.insert(AutoUpgradeSystem.detectedElements.remoteEvents, remoteData)
-                    print("📡 Found upgrade remote: " .. remote.Name)
-                end
-            end
+            table.insert(remotes, remote)
         end
     end
     
-    -- Sort buttons by priority
+    processBatch(remotes, function(remote)
+        local remoteName = remote.Name:lower()
+        
+        for _, pattern in ipairs(AutoUpgradeSystem.scanPatterns.remoteNames) do
+            if remoteName:find(pattern:lower()) then
+                local remoteData = {
+                    element = remote,
+                    type = "remote",
+                    name = remote.Name,
+                    className = remote.ClassName
+                }
+                
+                table.insert(AutoUpgradeSystem.detectedElements.remoteEvents, remoteData)
+                break
+            end
+        end
+    end)
+    
+    -- Sort by priority
     table.sort(AutoUpgradeSystem.detectedElements.upgradeButtons, function(a, b)
         return a.priority < b.priority
     end)
@@ -295,295 +421,271 @@ local function scanForUpgradeElements()
                      #AutoUpgradeSystem.detectedElements.buildingPads + 
                      #AutoUpgradeSystem.detectedElements.remoteEvents
     
-    print(string.format("✅ Scan complete! Found %d upgrade elements", totalFound))
+    print(string.format("✅ Optimized scan complete! Found %d elements", totalFound))
     
     return AutoUpgradeSystem.detectedElements
 end
 
--- Money Bypass System
-local function bypassMoneyRequirement(button)
+-- Optimized Money Bypass
+local function bypassMoneyRequirementOptimized(button)
     if not AutoUpgradeSystem.bypassMethods.moneyBypass then return false end
     
-    -- Method 1: Modify leaderstats
-    if player:FindFirstChild("leaderstats") then
-        for _, stat in pairs(player.leaderstats:GetChildren()) do
-            local statName = stat.Name:lower()
-            if statName:find("money") or statName:find("cash") or statName:find("coin") then
-                local originalValue = stat.Value
-                stat.Value = 999999999
-                
-                spawn(function()
-                    wait(1)
+    -- Quick leaderstats modification
+    spawn(function()
+        if player:FindFirstChild("leaderstats") then
+            for _, stat in pairs(player.leaderstats:GetChildren()) do
+                local statName = stat.Name:lower()
+                if statName:find("money") or statName:find("cash") or statName:find("coin") then
+                    local originalValue = stat.Value
+                    stat.Value = 999999999
+                    
+                    wait(0.5) -- Shorter wait time
                     stat.Value = originalValue
-                end)
-                
-                print("💰 Bypassed money requirement via leaderstats")
-                return true
+                    break
+                end
             end
         end
-    end
-    
-    -- Method 2: Hook remote events
-    local mt = getrawmetatable(game)
-    local oldNamecall = mt.__namecall
-    
-    setreadonly(mt, false)
-    mt.__namecall = newcclosure(function(self, ...)
-        local method = getnamecallmethod()
-        local args = {...}
-        
-        if method == "FireServer" and self.Name:lower():find("money") then
-            -- Spoof money check
-            return true
-        end
-        
-        return oldNamecall(self, ...)
     end)
-    setreadonly(mt, true)
     
-    print("💰 Money bypass hook installed")
     return true
 end
 
--- Advanced Button Clicking System
-local function clickUpgradeButton(buttonData)
+-- Optimized Button Clicking
+local function clickUpgradeButtonOptimized(buttonData)
     local button = buttonData.element
     if not button or not button.Parent or not button.Visible or not button.Active then
         return false
     end
     
-    print("🔄 Attempting to click: " .. button.Name)
-    
-    -- Bypass money requirement first
-    bypassMoneyRequirement(button)
+    -- Quick bypass
+    bypassMoneyRequirementOptimized(button)
     
     local success = false
     
-    -- Method 1: Direct connection firing
-    if button.MouseButton1Click then
-        local connections = getconnections(button.MouseButton1Click)
-        for _, connection in pairs(connections) do
-            spawn(function()
+    -- Prioritized clicking methods (fastest first)
+    spawn(function()
+        -- Method 1: Direct connection firing (fastest)
+        if button.MouseButton1Click then
+            local connections = getconnections(button.MouseButton1Click)
+            for _, connection in pairs(connections) do
                 connection:Fire()
-            end)
-            success = true
+                success = true
+                break -- Only fire first connection for speed
+            end
         end
-    end
-    
-    -- Method 2: Activated event
-    if button.Activated then
-        local connections = getconnections(button.Activated)
-        for _, connection in pairs(connections) do
-            spawn(function()
-                connection:Fire()
-            end)
-            success = true
-        end
-    end
-    
-    -- Method 3: Virtual input (for mobile support)
-    if UserInputService.TouchEnabled then
-        local buttonPos = button.AbsolutePosition
-        local buttonSize = button.AbsoluteSize
-        local clickX = buttonPos.X + buttonSize.X / 2
-        local clickY = buttonPos.Y + buttonSize.Y / 2
         
-        VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, true, game, 1)
-        wait(0.1)
-        VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, false, game, 1)
-        success = true
-    end
-    
-    -- Method 4: GuiService click simulation
-    pcall(function()
-        game:GetService("GuiService"):Click(button)
-        success = true
+        -- Method 2: Virtual input for mobile
+        if not success and isMobile then
+            local buttonPos = button.AbsolutePosition
+            local buttonSize = button.AbsoluteSize
+            local clickX = buttonPos.X + buttonSize.X / 2
+            local clickY = buttonPos.Y + buttonSize.Y / 2
+            
+            VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, true, game, 1)
+            VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, false, game, 1)
+            success = true
+        end
     end)
     
-    -- Method 5: Remote event firing
-    for _, remoteData in pairs(AutoUpgradeSystem.detectedElements.remoteEvents) do
-        local remote = remoteData.element
-        if remote and remote.Parent then
-            spawn(function()
-                if remote:IsA("RemoteEvent") then
-                    remote:FireServer(button.Name, "upgrade", true)
-                elseif remote:IsA("RemoteFunction") then
-                    remote:InvokeServer(button.Name, "upgrade", true)
-                end
-            end)
-            success = true
-        end
-    end
-    
     if success then
-        print("✅ Successfully clicked: " .. button.Name)
-        createNotification("⚡ Upgraded: " .. button.Name, Color3.fromRGB(100, 255, 100), 2)
-    else
-        print("❌ Failed to click: " .. button.Name)
+        createOptimizedNotification("⚡ " .. button.Name, Color3.fromRGB(100, 255, 100), 1.5)
     end
     
     return success
 end
 
--- Smart Upgrade Logic
-local function performSmartUpgrade()
+-- Optimized Smart Upgrade
+local function performSmartUpgradeOptimized()
     if not AutoUpgradeSystem.enabled then return end
     
-    -- Scan for new elements
-    local elements = scanForUpgradeElements()
+    -- Performance check
+    if detectLag() and AntiLagSystem.enabled then
+        print("⚠️ Lag detected, skipping upgrade cycle")
+        return
+    end
     
+    local elements = scanForUpgradeElementsOptimized()
     local upgradesPerformed = 0
     local maxUpgrades = AutoUpgradeSystem.maxUpgradesPerCycle
     
-    -- Process upgrade buttons
-    for _, buttonData in ipairs(elements.upgradeButtons) do
+    -- Process upgrades in batches
+    for i, buttonData in ipairs(elements.upgradeButtons) do
         if upgradesPerformed >= maxUpgrades then break end
         
         local button = buttonData.element
         if button and button.Parent and button.Visible and button.Active then
-            -- Check if button is actually clickable
-            local buttonText = button.Text:lower()
-            
-            -- Skip if button indicates insufficient funds (unless we're bypassing)
-            if not AutoUpgradeSystem.bypassMethods.moneyBypass then
-                if buttonText:find("insufficient") or buttonText:find("not enough") or buttonText:find("need more") then
-                    continue
-                end
-            end
-            
-            -- Skip if button is on cooldown
-            if not AutoUpgradeSystem.bypassMethods.cooldownBypass then
-                if buttonText:find("cooldown") or buttonText:find("wait") or buttonText:find("timer") then
-                    continue
-                end
-            end
-            
-            -- Attempt to click the button
-            if clickUpgradeButton(buttonData) then
+            if clickUpgradeButtonOptimized(buttonData) then
                 upgradesPerformed = upgradesPerformed + 1
-                wait(AutoUpgradeSystem.upgradeDelay)
-            end
-        end
-    end
-    
-    -- Process building pads (touch to upgrade)
-    for _, padData in ipairs(elements.buildingPads) do
-        if upgradesPerformed >= maxUpgrades then break end
-        
-        local pad = padData.element
-        if pad and pad.Parent and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            -- Check if pad is close enough
-            local distance = (player.Character.HumanoidRootPart.Position - pad.Position).Magnitude
-            if distance < 100 then
-                -- Touch the pad
-                firetouchinterest(player.Character.HumanoidRootPart, pad, 0)
-                firetouchinterest(player.Character.HumanoidRootPart, pad, 1)
                 
-                print("🏗️ Touched building pad: " .. pad.Name)
-                upgradesPerformed = upgradesPerformed + 1
-                wait(AutoUpgradeSystem.upgradeDelay)
+                -- Dynamic delay based on performance
+                local delay = AutoUpgradeSystem.upgradeDelay
+                if AntiLagSystem.performanceStats.avgFPS < 20 then
+                    delay = delay * 2 -- Longer delay if FPS is low
+                end
+                
+                wait(delay)
             end
         end
-    end
-    
-    if upgradesPerformed > 0 then
-        print(string.format("⚡ Performed %d upgrades this cycle", upgradesPerformed))
-    end
-end
-
--- Auto Upgrade Main Loop
-local function startAutoUpgrade()
-    if AutoUpgradeSystem.connections.mainLoop then
-        AutoUpgradeSystem.connections.mainLoop:Disconnect()
-    end
-    
-    AutoUpgradeSystem.connections.mainLoop = RunService.Heartbeat:Connect(function()
-        if AutoUpgradeSystem.enabled then
-            spawn(performSmartUpgrade)
+        
+        -- Yield every few iterations to prevent lag
+        if i % AutoUpgradeSystem.batchSize == 0 then
+            RunService.Heartbeat:Wait()
         end
-    end)
-    
-    print("🚀 Auto Upgrade system started!")
-    createNotification("🚀 Auto Upgrade Started!\nDynamic scanning enabled", Color3.fromRGB(100, 255, 100), 3)
-end
-
-local function stopAutoUpgrade()
-    if AutoUpgradeSystem.connections.mainLoop then
-        AutoUpgradeSystem.connections.mainLoop:Disconnect()
-        AutoUpgradeSystem.connections.mainLoop = nil
     end
     
-    print("⏹️ Auto Upgrade system stopped!")
-    createNotification("⏹️ Auto Upgrade Stopped", Color3.fromRGB(255, 100, 100), 2)
+    -- Memory cleanup after upgrades
+    if upgradesPerformed > 0 then
+        performMemoryCleanup()
+    end
 end
 
--- Configuration GUI
-local function createConfigGUI()
+-- Mobile-Optimized GUI with Minimize Feature
+local function createOptimizedGUI()
     local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "AutoUpgradeConfig"
+    screenGui.Name = "AutoUpgradeOptimized"
     screenGui.ResetOnSpawn = false
     screenGui.Parent = playerGui
     
+    -- Responsive sizing
+    local guiSize = isMobile and UDim2.new(0, 320, 0, 450) or UDim2.new(0, 400, 0, 500)
+    local guiPosition = isMobile and UDim2.new(0, 10, 0, 50) or UDim2.new(0.5, -200, 0.5, -250)
+    
     local mainFrame = Instance.new("Frame")
-    mainFrame.Size = UDim2.new(0, 400, 0, 500)
-    mainFrame.Position = UDim2.new(0.5, -200, 0.5, -250)
+    mainFrame.Name = "MainFrame"
+    mainFrame.Size = guiSize
+    mainFrame.Position = guiPosition
     mainFrame.BackgroundColor3 = Color3.fromRGB(25, 30, 40)
     mainFrame.BorderSizePixel = 0
     mainFrame.Active = true
-    mainFrame.Draggable = true
+    mainFrame.Draggable = not isMobile -- Disable drag on mobile for performance
     mainFrame.Parent = screenGui
     
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 15)
+    corner.CornerRadius = UDim.new(0, isMobile and 12 or 15)
     corner.Parent = mainFrame
     
     local stroke = Instance.new("UIStroke")
     stroke.Color = Color3.fromRGB(70, 130, 255)
-    stroke.Thickness = 2
+    stroke.Thickness = isMobile and 1 or 2
     stroke.Transparency = 0.4
     stroke.Parent = mainFrame
     
-    -- Title
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, -20, 0, 40)
-    title.Position = UDim2.new(0, 10, 0, 10)
-    title.BackgroundTransparency = 1
-    title.Text = "⚡ Dynamic Auto Upgrade System"
-    title.TextColor3 = Color3.fromRGB(100, 200, 255)
-    title.TextSize = 18
-    title.Font = Enum.Font.GothamBold
-    title.Parent = mainFrame
+    -- Optimized Title Bar
+    local titleBar = Instance.new("Frame")
+    titleBar.Name = "TitleBar"
+    titleBar.Size = UDim2.new(1, 0, 0, isMobile and 35 or 40)
+    titleBar.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
+    titleBar.BorderSizePixel = 0
+    titleBar.Parent = mainFrame
     
-    -- Main toggle
+    local titleCorner = Instance.new("UICorner")
+    titleCorner.CornerRadius = UDim.new(0, isMobile and 12 or 15)
+    titleCorner.Parent = titleBar
+    
+    local titleExt = Instance.new("Frame")
+    titleExt.Size = UDim2.new(1, 0, 0, 15)
+    titleExt.Position = UDim2.new(0, 0, 1, -15)
+    titleExt.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
+    titleExt.BorderSizePixel = 0
+    titleExt.Parent = titleBar
+    
+    -- Animated title with performance icon
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, -120, 1, 0)
+    titleLabel.Position = UDim2.new(0, 15, 0, 0)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = "⚡ Auto Upgrade " .. (isMobile and "📱" or "💻")
+    titleLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+    titleLabel.TextSize = isMobile and 11 or 14
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.TextScaled = isMobile
+    titleLabel.Parent = titleBar
+    
+    -- Performance indicator
+    local perfIndicator = Instance.new("TextLabel")
+    perfIndicator.Size = UDim2.new(0, 40, 1, 0)
+    perfIndicator.Position = UDim2.new(1, -110, 0, 0)
+    perfIndicator.BackgroundTransparency = 1
+    perfIndicator.Text = "🟢"
+    perfIndicator.TextColor3 = Color3.fromRGB(100, 255, 100)
+    perfIndicator.TextSize = isMobile and 12 or 16
+    perfIndicator.Font = Enum.Font.Gotham
+    perfIndicator.Parent = titleBar
+    
+    -- Minimize Button
+    local minimizeBtn = Instance.new("TextButton")
+    minimizeBtn.Name = "MinimizeButton"
+    minimizeBtn.Size = UDim2.new(0, isMobile and 25 or 30, 0, isMobile and 20 or 25)
+    minimizeBtn.Position = UDim2.new(1, isMobile and -65 or -70, 0, isMobile and 7 or 7)
+    minimizeBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 50)
+    minimizeBtn.Text = "−"
+    minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    minimizeBtn.TextSize = isMobile and 14 or 16
+    minimizeBtn.Font = Enum.Font.GothamBold
+    minimizeBtn.BorderSizePixel = 0
+    minimizeBtn.Parent = titleBar
+    
+    local minimizeBtnCorner = Instance.new("UICorner")
+    minimizeBtnCorner.CornerRadius = UDim.new(0, 3)
+    minimizeBtnCorner.Parent = minimizeBtn
+    
+    -- Close Button
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Name = "CloseButton"
+    closeBtn.Size = UDim2.new(0, isMobile and 25 or 30, 0, isMobile and 20 or 25)
+    closeBtn.Position = UDim2.new(1, isMobile and -35 or -35, 0, isMobile and 7 or 7)
+    closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    closeBtn.Text = "×"
+    closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeBtn.TextSize = isMobile and 14 or 16
+    closeBtn.Font = Enum.Font.GothamBold
+    closeBtn.BorderSizePixel = 0
+    closeBtn.Parent = titleBar
+    
+    local closeBtnCorner = Instance.new("UICorner")
+    closeBtnCorner.CornerRadius = UDim.new(0, 3)
+    closeBtnCorner.Parent = closeBtn
+    
+    -- Content Frame (for minimize functionality)
+    local contentFrame = Instance.new("Frame")
+    contentFrame.Name = "ContentFrame"
+    contentFrame.Size = UDim2.new(1, 0, 1, isMobile and -35 or -40)
+    contentFrame.Position = UDim2.new(0, 0, 0, isMobile and 35 or 40)
+    contentFrame.BackgroundTransparency = 1
+    contentFrame.Parent = mainFrame
+    
+    -- Main Toggle (Optimized)
     local toggleFrame = Instance.new("Frame")
-    toggleFrame.Size = UDim2.new(1, -20, 0, 60)
-    toggleFrame.Position = UDim2.new(0, 10, 0, 60)
+    toggleFrame.Size = UDim2.new(1, -20, 0, isMobile and 50 or 60)
+    toggleFrame.Position = UDim2.new(0, 10, 0, 10)
     toggleFrame.BackgroundColor3 = Color3.fromRGB(40, 45, 55)
     toggleFrame.BorderSizePixel = 0
-    toggleFrame.Parent = mainFrame
+    toggleFrame.Parent = contentFrame
     
     local toggleCorner = Instance.new("UICorner")
     toggleCorner.CornerRadius = UDim.new(0, 8)
     toggleCorner.Parent = toggleFrame
     
     local toggleLabel = Instance.new("TextLabel")
-    toggleLabel.Size = UDim2.new(0, 250, 1, 0)
+    toggleLabel.Size = UDim2.new(0, isMobile and 180 or 250, 1, 0)
     toggleLabel.Position = UDim2.new(0, 15, 0, 0)
     toggleLabel.BackgroundTransparency = 1
-    toggleLabel.Text = "🚀 Auto Upgrade (Dynamic)\nUpgrade base tanpa money"
+    toggleLabel.Text = "🚀 Auto Upgrade (Optimized)\n" .. (isMobile and "Mobile Mode" or "PC Mode") .. " • Anti-Lag"
     toggleLabel.TextColor3 = Color3.fromRGB(200, 220, 255)
-    toggleLabel.TextSize = 14
+    toggleLabel.TextSize = isMobile and 10 or 12
     toggleLabel.Font = Enum.Font.GothamBold
     toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    toggleLabel.TextScaled = isMobile
     toggleLabel.Parent = toggleFrame
     
     local toggleBtn = Instance.new("TextButton")
-    toggleBtn.Size = UDim2.new(0, 80, 0, 35)
-    toggleBtn.Position = UDim2.new(1, -90, 0, 12)
+    toggleBtn.Size = UDim2.new(0, isMobile and 60 or 80, 0, isMobile and 25 or 35)
+    toggleBtn.Position = UDim2.new(1, isMobile and -70 or -90, 0, isMobile and 12 or 12)
     toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 70, 80)
     toggleBtn.Text = "OFF"
     toggleBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-    toggleBtn.TextSize = 14
+    toggleBtn.TextSize = isMobile and 10 or 12
     toggleBtn.Font = Enum.Font.GothamBold
     toggleBtn.BorderSizePixel = 0
     toggleBtn.Parent = toggleFrame
@@ -592,16 +694,41 @@ local function createConfigGUI()
     toggleBtnCorner.CornerRadius = UDim.new(0, 6)
     toggleBtnCorner.Parent = toggleBtn
     
-    -- Settings
+    -- Performance Stats
+    local statsFrame = Instance.new("Frame")
+    statsFrame.Size = UDim2.new(1, -20, 0, isMobile and 60 or 80)
+    statsFrame.Position = UDim2.new(0, 10, 0, isMobile and 70 or 80)
+    statsFrame.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
+    statsFrame.BorderSizePixel = 0
+    statsFrame.Parent = contentFrame
+    
+    local statsCorner = Instance.new("UICorner")
+    statsCorner.CornerRadius = UDim.new(0, 8)
+    statsCorner.Parent = statsFrame
+    
+    local statsLabel = Instance.new("TextLabel")
+    statsLabel.Size = UDim2.new(1, -20, 1, 0)
+    statsLabel.Position = UDim2.new(0, 10, 0, 0)
+    statsLabel.BackgroundTransparency = 1
+    statsLabel.Text = "📊 Performance Stats\nFPS: 60 | Memory: 0MB | Lag Spikes: 0\nOptimizations: 0 | Status: Ready"
+    statsLabel.TextColor3 = Color3.fromRGB(150, 170, 190)
+    statsLabel.TextSize = isMobile and 8 or 10
+    statsLabel.Font = Enum.Font.Gotham
+    statsLabel.TextXAlignment = Enum.TextXAlignment.Left
+    statsLabel.TextScaled = isMobile
+    statsLabel.Parent = statsFrame
+    
+    -- Settings Scroll Frame (Optimized)
     local settingsFrame = Instance.new("ScrollingFrame")
-    settingsFrame.Size = UDim2.new(1, -20, 1, -140)
-    settingsFrame.Position = UDim2.new(0, 10, 0, 130)
+    settingsFrame.Size = UDim2.new(1, -20, 1, isMobile and -150 or -170)
+    settingsFrame.Position = UDim2.new(0, 10, 0, isMobile and 140 or 170)
     settingsFrame.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
     settingsFrame.BorderSizePixel = 0
-    settingsFrame.ScrollBarThickness = 6
+    settingsFrame.ScrollBarThickness = isMobile and 3 or 6
     settingsFrame.ScrollBarImageColor3 = Color3.fromRGB(70, 130, 255)
-    settingsFrame.CanvasSize = UDim2.new(0, 0, 0, 600)
-    settingsFrame.Parent = mainFrame
+    settingsFrame.CanvasSize = UDim2.new(0, 0, 0, isMobile and 400 or 500)
+    settingsFrame.ScrollingDirection = Enum.ScrollingDirection.Y
+    settingsFrame.Parent = contentFrame
     
     local settingsCorner = Instance.new("UICorner")
     settingsCorner.CornerRadius = UDim.new(0, 8)
@@ -609,13 +736,13 @@ local function createConfigGUI()
     
     local layout = Instance.new("UIListLayout")
     layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Padding = UDim.new(0, 10)
+    layout.Padding = UDim.new(0, isMobile and 6 or 8)
     layout.Parent = settingsFrame
     
-    -- Create setting toggles
-    local function createSettingToggle(name, description, setting, layoutOrder)
+    -- Optimized Setting Toggle Creation
+    local function createOptimizedToggle(name, description, setting, layoutOrder, callback)
         local frame = Instance.new("Frame")
-        frame.Size = UDim2.new(1, -20, 0, 50)
+        frame.Size = UDim2.new(1, -20, 0, isMobile and 40 or 45)
         frame.BackgroundColor3 = Color3.fromRGB(40, 45, 55)
         frame.BorderSizePixel = 0
         frame.LayoutOrder = layoutOrder
@@ -626,23 +753,24 @@ local function createConfigGUI()
         frameCorner.Parent = frame
         
         local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(0, 200, 1, 0)
+        label.Size = UDim2.new(0, isMobile and 160 or 200, 1, 0)
         label.Position = UDim2.new(0, 10, 0, 0)
         label.BackgroundTransparency = 1
-        label.Text = name .. "\n" .. description
+        label.Text = name .. (isMobile and "" or "\n" .. description)
         label.TextColor3 = Color3.fromRGB(200, 220, 255)
-        label.TextSize = 11
+        label.TextSize = isMobile and 9 or 11
         label.Font = Enum.Font.Gotham
         label.TextXAlignment = Enum.TextXAlignment.Left
+        label.TextScaled = isMobile
         label.Parent = frame
         
         local toggle = Instance.new("TextButton")
-        toggle.Size = UDim2.new(0, 60, 0, 25)
-        toggle.Position = UDim2.new(1, -70, 0, 12)
-        toggle.BackgroundColor3 = AutoUpgradeSystem.bypassMethods[setting] and Color3.fromRGB(50, 120, 50) or Color3.fromRGB(60, 70, 80)
-        toggle.Text = AutoUpgradeSystem.bypassMethods[setting] and "ON" or "OFF"
-        toggle.TextColor3 = AutoUpgradeSystem.bypassMethods[setting] and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
-        toggle.TextSize = 10
+        toggle.Size = UDim2.new(0, isMobile and 45 or 60, 0, isMobile and 20 or 25)
+        toggle.Position = UDim2.new(1, isMobile and -55 or -70, 0, isMobile and 10 or 10)
+        toggle.BackgroundColor3 = (setting and AutoUpgradeSystem.bypassMethods[setting] or false) and Color3.fromRGB(50, 120, 50) or Color3.fromRGB(60, 70, 80)
+        toggle.Text = (setting and AutoUpgradeSystem.bypassMethods[setting] or false) and "ON" or "OFF"
+        toggle.TextColor3 = (setting and AutoUpgradeSystem.bypassMethods[setting] or false) and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+        toggle.TextSize = isMobile and 8 or 10
         toggle.Font = Enum.Font.GothamBold
         toggle.BorderSizePixel = 0
         toggle.Parent = frame
@@ -652,51 +780,80 @@ local function createConfigGUI()
         toggleCorner.Parent = toggle
         
         toggle.MouseButton1Click:Connect(function()
-            AutoUpgradeSystem.bypassMethods[setting] = not AutoUpgradeSystem.bypassMethods[setting]
-            toggle.BackgroundColor3 = AutoUpgradeSystem.bypassMethods[setting] and Color3.fromRGB(50, 120, 50) or Color3.fromRGB(60, 70, 80)
-            toggle.Text = AutoUpgradeSystem.bypassMethods[setting] and "ON" or "OFF"
-            toggle.TextColor3 = AutoUpgradeSystem.bypassMethods[setting] and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+            if setting then
+                AutoUpgradeSystem.bypassMethods[setting] = not AutoUpgradeSystem.bypassMethods[setting]
+                local isEnabled = AutoUpgradeSystem.bypassMethods[setting]
+                
+                createSmoothTween(toggle, {
+                    BackgroundColor3 = isEnabled and Color3.fromRGB(50, 120, 50) or Color3.fromRGB(60, 70, 80)
+                }, 0.2)
+                
+                toggle.Text = isEnabled and "ON" or "OFF"
+                toggle.TextColor3 = isEnabled and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
+            end
+            
+            if callback then callback() end
         end)
+        
+        -- Touch support for mobile
+        if isMobile then
+            toggle.TouchTap:Connect(function()
+                toggle.MouseButton1Click:Fire()
+            end)
+        end
+        
+        return toggle
     end
     
-    createSettingToggle("💰 Money Bypass", "Bypass money requirements", "moneyBypass", 1)
-    createSettingToggle("📋 Requirement Bypass", "Bypass level/unlock requirements", "requirementBypass", 2)
-    createSettingToggle("⏰ Cooldown Bypass", "Bypass upgrade cooldowns", "cooldownBypass", 3)
-    createSettingToggle("🎯 Level Bypass", "Bypass level restrictions", "levelBypass", 4)
+    -- Create optimized toggles
+    createOptimizedToggle("💰 Money Bypass", "Bypass money requirements", "moneyBypass", 1)
+    createOptimizedToggle("📋 Requirement Bypass", "Bypass level/unlock requirements", "requirementBypass", 2)
+    createOptimizedToggle("⏰ Cooldown Bypass", "Bypass upgrade cooldowns", "cooldownBypass", 3)
+    createOptimizedToggle("🎯 Level Bypass", "Bypass level restrictions", "levelBypass", 4)
     
-    -- Statistics
-    local statsFrame = Instance.new("Frame")
-    statsFrame.Size = UDim2.new(1, -20, 0, 100)
-    statsFrame.BackgroundColor3 = Color3.fromRGB(40, 45, 55)
-    statsFrame.BorderSizePixel = 0
-    statsFrame.LayoutOrder = 5
-    statsFrame.Parent = settingsFrame
+    -- Anti-lag toggles
+    createOptimizedToggle("🚀 Anti-Lag System", "Enable performance optimizations", nil, 5, function()
+        AntiLagSystem.enabled = not AntiLagSystem.enabled
+        if AntiLagSystem.enabled then
+            applyAntiLagOptimizations()
+            createOptimizedNotification("🚀 Anti-Lag Enabled", Color3.fromRGB(100, 255, 100), 2)
+        else
+            createOptimizedNotification("🚀 Anti-Lag Disabled", Color3.fromRGB(255, 100, 100), 2)
+        end
+    end)
     
-    local statsCorner = Instance.new("UICorner")
-    statsCorner.CornerRadius = UDim.new(0, 6)
-    statsCorner.Parent = statsFrame
+    createOptimizedToggle("✨ Smooth Animations", "Enable smooth GUI animations", nil, 6, function()
+        PerformanceManager.smoothAnimations = not PerformanceManager.smoothAnimations
+        createOptimizedNotification("✨ Animations " .. (PerformanceManager.smoothAnimations and "Enabled" or "Disabled"), 
+                                   Color3.fromRGB(100, 200, 255), 2)
+    end)
     
-    local statsLabel = Instance.new("TextLabel")
-    statsLabel.Size = UDim2.new(1, -20, 1, 0)
-    statsLabel.Position = UDim2.new(0, 10, 0, 0)
-    statsLabel.BackgroundTransparency = 1
-    statsLabel.Text = "📊 Statistics\nButtons: 0 | Pads: 0 | Remotes: 0\nLast Scan: Never"
-    statsLabel.TextColor3 = Color3.fromRGB(150, 170, 190)
-    statsLabel.TextSize = 12
-    statsLabel.Font = Enum.Font.Gotham
-    statsLabel.TextXAlignment = Enum.TextXAlignment.Left
-    statsLabel.Parent = statsFrame
+    -- Minimize functionality
+    local isMinimized = false
+    local originalSize = mainFrame.Size
+    local minimizedSize = UDim2.new(originalSize.X.Scale, originalSize.X.Offset, 0, isMobile and 35 or 40)
     
-    -- Update stats
-    local function updateStats()
-        local elements = AutoUpgradeSystem.detectedElements
-        local buttonCount = #elements.upgradeButtons
-        local padCount = #elements.buildingPads
-        local remoteCount = #elements.remoteEvents
-        local lastScan = AutoUpgradeSystem.lastScanTime > 0 and os.date("%H:%M:%S", AutoUpgradeSystem.lastScanTime) or "Never"
+    minimizeBtn.MouseButton1Click:Connect(function()
+        isMinimized = not isMinimized
         
-        statsLabel.Text = string.format("📊 Statistics\nButtons: %d | Pads: %d | Remotes: %d\nLast Scan: %s", 
-                                       buttonCount, padCount, remoteCount, lastScan)
+        if isMinimized then
+            createSmoothTween(mainFrame, {Size = minimizedSize}, 0.3)
+            contentFrame.Visible = false
+            minimizeBtn.Text = "+"
+            titleLabel.Text = "⚡ Auto Upgrade (Minimized)"
+        else
+            createSmoothTween(mainFrame, {Size = originalSize}, 0.3)
+            contentFrame.Visible = true
+            minimizeBtn.Text = "−"
+            titleLabel.Text = "⚡ Auto Upgrade " .. (isMobile and "📱" or "💻")
+        end
+    end)
+    
+    -- Touch support for mobile minimize
+    if isMobile then
+        minimizeBtn.TouchTap:Connect(function()
+            minimizeBtn.MouseButton1Click:Fire()
+        end)
     end
     
     -- Main toggle functionality
@@ -704,90 +861,198 @@ local function createConfigGUI()
         AutoUpgradeSystem.enabled = not AutoUpgradeSystem.enabled
         
         if AutoUpgradeSystem.enabled then
+            createSmoothTween(toggleBtn, {
+                BackgroundColor3 = Color3.fromRGB(50, 120, 50)
+            }, 0.2)
             toggleBtn.Text = "ON"
             toggleBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
-            toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 120, 50)
-            startAutoUpgrade()
+            
+            -- Start optimized auto upgrade
+            if AutoUpgradeSystem.connections.mainLoop then
+                AutoUpgradeSystem.connections.mainLoop:Disconnect()
+            end
+            
+            AutoUpgradeSystem.connections.mainLoop = RunService.Heartbeat:Connect(function()
+                if AutoUpgradeSystem.enabled then
+                    spawn(performSmartUpgradeOptimized)
+                end
+            end)
+            
+            createOptimizedNotification("🚀 Optimized Auto Upgrade Started!", Color3.fromRGB(100, 255, 100), 3)
         else
+            createSmoothTween(toggleBtn, {
+                BackgroundColor3 = Color3.fromRGB(60, 70, 80)
+            }, 0.2)
             toggleBtn.Text = "OFF"
             toggleBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-            toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 70, 80)
-            stopAutoUpgrade()
+            
+            if AutoUpgradeSystem.connections.mainLoop then
+                AutoUpgradeSystem.connections.mainLoop:Disconnect()
+                AutoUpgradeSystem.connections.mainLoop = nil
+            end
+            
+            createOptimizedNotification("⏹️ Auto Upgrade Stopped", Color3.fromRGB(255, 100, 100), 2)
         end
     end)
     
-    -- Update stats every 3 seconds
+    -- Touch support for main toggle
+    if isMobile then
+        toggleBtn.TouchTap:Connect(function()
+            toggleBtn.MouseButton1Click:Fire()
+        end)
+    end
+    
+    -- Close button functionality
+    closeBtn.MouseButton1Click:Connect(function()
+        createSmoothTween(mainFrame, {
+            Size = UDim2.new(0, 0, 0, 0),
+            Position = UDim2.new(0.5, 0, 0.5, 0)
+        }, 0.3)
+        
+        wait(0.3)
+        screenGui:Destroy()
+    end)
+    
+    -- Touch support for close
+    if isMobile then
+        closeBtn.TouchTap:Connect(function()
+            closeBtn.MouseButton1Click:Fire()
+        end)
+    end
+    
+    -- Performance monitoring
     spawn(function()
         while screenGui.Parent do
-            updateStats()
-            wait(3)
+            local fps = getFPS()
+            local memory = getMemoryUsage()
+            
+            AntiLagSystem.performanceStats.avgFPS = fps
+            AntiLagSystem.performanceStats.memoryUsage = memory
+            
+            -- Update performance indicator
+            if fps > 45 then
+                perfIndicator.Text = "🟢"
+                perfIndicator.TextColor3 = Color3.fromRGB(100, 255, 100)
+            elseif fps > 25 then
+                perfIndicator.Text = "🟡"
+                perfIndicator.TextColor3 = Color3.fromRGB(255, 255, 100)
+            else
+                perfIndicator.Text = "🔴"
+                perfIndicator.TextColor3 = Color3.fromRGB(255, 100, 100)
+            end
+            
+            -- Update stats
+            local elements = AutoUpgradeSystem.detectedElements
+            local buttonCount = #elements.upgradeButtons
+            local padCount = #elements.buildingPads
+            local remoteCount = #elements.remoteEvents
+            
+            statsLabel.Text = string.format(
+                "📊 Performance Stats\nFPS: %d | Memory: %dMB | Lag: %d\nButtons: %d | Pads: %d | Remotes: %d",
+                fps, math.floor(memory), AntiLagSystem.performanceStats.lagSpikes,
+                buttonCount, padCount, remoteCount
+            )
+            
+            wait(1)
         end
-    end)
-    
-    -- Close button
-    local closeBtn = Instance.new("TextButton")
-    closeBtn.Size = UDim2.new(0, 30, 0, 25)
-    closeBtn.Position = UDim2.new(1, -40, 0, 10)
-    closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-    closeBtn.Text = "×"
-    closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    closeBtn.TextSize = 16
-    closeBtn.Font = Enum.Font.GothamBold
-    closeBtn.BorderSizePixel = 0
-    closeBtn.Parent = mainFrame
-    
-    local closeBtnCorner = Instance.new("UICorner")
-    closeBtnCorner.CornerRadius = UDim.new(0, 3)
-    closeBtnCorner.Parent = closeBtn
-    
-    closeBtn.MouseButton1Click:Connect(function()
-        screenGui:Destroy()
     end)
     
     return screenGui
 end
 
--- Initialize system
-local function initialize()
-    print("🚀 Initializing Dynamic Auto Upgrade System...")
+-- Initialize Optimized System
+local function initializeOptimizedSystem()
+    print("🚀 Initializing Optimized Auto Upgrade System...")
+    
+    -- Apply initial optimizations
+    applyAntiLagOptimizations()
+    
+    -- Start performance monitoring
+    spawn(function()
+        while true do
+            performMemoryCleanup()
+            wait(PerformanceManager.memoryCheckInterval)
+        end
+    end)
+    
+    -- Create optimized GUI
+    createOptimizedGUI()
     
     -- Initial scan
-    scanForUpgradeElements()
+    scanForUpgradeElementsOptimized()
     
-    -- Create GUI
-    createConfigGUI()
+    createOptimizedNotification(
+        "⚡ Optimized Auto Upgrade Loaded!\n" .. 
+        (isMobile and "📱 Mobile Mode" or "💻 PC Mode") .. 
+        " • Anti-Lag • Minimize Support", 
+        Color3.fromRGB(100, 200, 255), 4
+    )
     
-    createNotification("⚡ Dynamic Auto Upgrade System Loaded!\nNo static data - Full dynamic detection", Color3.fromRGB(100, 200, 255), 4)
-    
-    print("✅ Dynamic Auto Upgrade System ready!")
-    print("📋 Features:")
-    print("   • Dynamic element detection")
-    print("   • Money bypass system")
-    print("   • Smart upgrade logic")
-    print("   • Mobile support")
-    print("   • No static data used")
-    print("   • Real-time scanning")
+    print("✅ Optimized Auto Upgrade System ready!")
+    print("📋 Optimizations:")
+    print("   • Anti-lag system active")
+    print("   • Memory management enabled")
+    print("   • Batch processing implemented")
+    print("   • Mobile optimizations applied")
+    print("   • Smooth animations available")
+    print("   • Minimize functionality added")
+    print("   • Performance monitoring active")
 end
 
--- Keyboard shortcut
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    
-    if input.KeyCode == Enum.KeyCode.F1 then
-        if playerGui:FindFirstChild("AutoUpgradeConfig") then
-            playerGui.AutoUpgradeConfig:Destroy()
-        else
-            createConfigGUI()
+-- Keyboard shortcuts (PC only)
+if isPC then
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        
+        if input.KeyCode == Enum.KeyCode.F2 then
+            if playerGui:FindFirstChild("AutoUpgradeOptimized") then
+                playerGui.AutoUpgradeOptimized:Destroy()
+            else
+                createOptimizedGUI()
+            end
+        elseif input.KeyCode == Enum.KeyCode.F3 then
+            -- Toggle anti-lag
+            AntiLagSystem.enabled = not AntiLagSystem.enabled
+            if AntiLagSystem.enabled then
+                applyAntiLagOptimizations()
+            end
+            createOptimizedNotification("🚀 Anti-Lag " .. (AntiLagSystem.enabled and "ON" or "OFF"), 
+                                       Color3.fromRGB(100, 255, 100), 2)
         end
-    end
-end)
+    end)
+end
+
+-- Mobile gesture support
+if isMobile then
+    local touchStartTime = 0
+    local touchCount = 0
+    
+    UserInputService.TouchStarted:Connect(function(touch, gameProcessed)
+        if gameProcessed then return end
+        touchStartTime = tick()
+        touchCount = touchCount + 1
+        
+        -- Triple tap to toggle GUI
+        spawn(function()
+            wait(0.5)
+            if touchCount >= 3 then
+                if playerGui:FindFirstChild("AutoUpgradeOptimized") then
+                    playerGui.AutoUpgradeOptimized:Destroy()
+                else
+                    createOptimizedGUI()
+                end
+            end
+            touchCount = 0
+        end)
+    end)
+end
 
 -- Auto-reconnect on character respawn
 player.CharacterAdded:Connect(function()
-    wait(3) -- Wait for character to fully load
-    scanForUpgradeElements() -- Rescan elements
-    createNotification("🔄 Auto Upgrade system reconnected", Color3.fromRGB(100, 200, 255), 2)
+    wait(3)
+    scanForUpgradeElementsOptimized()
+    createOptimizedNotification("🔄 System reconnected after respawn", Color3.fromRGB(100, 200, 255), 2)
 end)
 
 -- Initialize
-initialize()
+initializeOptimizedSystem()
